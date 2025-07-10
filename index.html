@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to Task Manager</title>
+
+  <!-- PWA Meta and Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#00e5ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TaskManager" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <!-- Favicon and Icons -->
+  <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192x192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="icon-512x512.png" />
+
+  <!-- Styles -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --primary-color: #6366f1;
+      --primary-hover: #4f46e5;
+      --text-color: #ffffff;
+      --bg-color: rgba(0, 0, 0, 0.5);
+      --card-bg: rgba(255, 255, 255, 0.1);
+      --border-color: rgba(255, 255, 255, 0.2);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: var(--text-color);
+      background: url('img.jpg') no-repeat center center fixed;
+      background-size: cover;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: -1;
+    }
+
+    .welcome-container {
+      text-align: center;
+      max-width: 800px;
+      padding: 2rem;
+      background: var(--card-bg);
+      backdrop-filter: blur(1px);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-lg);
+      margin: 1rem;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .continue-btn {
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+      text-decoration: none;
+      display: inline-block;
+      margin: 0.5rem;
+    }
+
+    .continue-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      background: linear-gradient(135deg, #5a6fd1 0%, #6a4096 100%);
+    }
+
+    @media (max-width: 768px) {
+      .welcome-container {
+        padding: 1.5rem;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      p {
+        font-size: 1rem;
+      }
+
+      .continue-btn {
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+      }
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: #fff;
+      color: #333;
+      padding: 20px 30px;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 500;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="welcome-container">
+    <h1>
+      <a href="admin.html" style="text-decoration: none; color: inherit; cursor: pointer;">List Mesin CE</a>
+    </h1>
+    <a href="app.html" class="continue-btn">List Mesin</a>
+    <a href="app1.html" class="continue-btn">Catatan</a>
+  </div>
+
+  <!-- MODAL -->
+  <div id="myModal" class="modal">
+    <div class="modal-content">
+      <p>Halaman dimuat ulang</p>
+    </div>
+  </div>
+
+  <!-- TAP 5X SCRIPT -->
+  <script>
+    let tapCount = 0;
+    let tapTimer;
+
+    document.body.addEventListener("click", () => {
+      tapCount++;
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(() => tapCount = 0, 1000);
+
+      if (tapCount === 5) {
+        tapCount = 0;
+        showModal();
+      }
+    });
+
+    function showModal() {
+      const modal = document.getElementById("myModal");
+      modal.style.display = "flex";
+
+      setTimeout(() => {
+        modal.style.display = "none";
+        location.reload();
+      }, 1500);
+    }
+  </script>
+
+  <!-- PWA Script: Service Worker + Install Prompt -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then((reg) => console.log('Service Worker registered from index.html', reg))
+        .catch((err) => console.error('SW registration failed', err));
+    }
+
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      console.log('Install prompt available');
+      // Tampilkan tombol install jika ingin
+    });
+
+    window.addEventListener('appinstalled', () => {
+      console.log('App installed from index.html');
+    });
+  </script>
+</body>
+</html>

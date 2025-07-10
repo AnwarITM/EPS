@@ -1,0 +1,38 @@
+:root {
+  /* Warna dasar */
+  --bg-color: #273F4F;
+  --card-bg: rgba(20, 26, 42, 0.7);     /* ← transparansi di sini */
+  --text-color: #dce3f2;
+  --border-color: rgba(255, 255, 255, 0.1);
+
+  /* Warna utama & status */
+  --primary-color: #8ab4f8;
+  --danger-color: #ff6b81;
+  --success-color: #7fffd4;
+  --text-secondary: #98a6bd;
+  --header-text-color: #ffffff;
+
+  /* Hover & status */
+  --primary-hover: #6ea8fc;
+  --status-done-bg: rgba(127, 255, 212, 0.08);
+  --status-outstanding-bg: rgba(255, 107, 129, 0.08);
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(255, 255, 255, 0.05);
+  --shadow-md: 0 4px 6px rgba(255, 255, 255, 0.08);
+  --shadow-lg: 0 10px 15px rgba(255, 255, 255, 0.1);
+
+  /* Gradien */
+  --gradient-primary: linear-gradient(145deg, #8ab4f8 0%, #cbd5e1 100%);
+}
+
+/* === BACKGROUND === */
+body {
+  background-image: url('img.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-color: #0a0a1a;
+  color: var(--text-color);
+}
