@@ -334,13 +334,15 @@ function sortByPeriod() {
 }
 
 // Import/Export functions
+
 function exportData() {
   const activeTab = tabs[currentTab];
   const exportRows = activeTab.data.map((item, index) => ({
     No: index + 1,
-    "Data Mesin": item.machine,
-    Plan: item.notes,
-    Status: item.status
+    "Data Mesin": item.machineData || '',
+    Plan: item.period || '',
+    Notes: item.notes || '',
+    Status: item.status || ''
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(exportRows);
@@ -356,7 +358,7 @@ function importData(event) {
   const fileName = file.name.toLowerCase();
 
   if (fileName.endsWith('.json')) {
-    // Import dari JSON (lama, tetap didukung)
+    // Import dari JSON
     reader.onload = function (e) {
       try {
         const importedTabs = JSON.parse(e.target.result);
@@ -382,17 +384,16 @@ function importData(event) {
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        // Validasi minimal
         if (!jsonData.length || !jsonData[0]['Data Mesin']) {
-          alert("Format Excel tidak sesuai. Pastikan ada kolom 'Data Mesin', 'Plan', dan 'Status'.");
+          alert("Format Excel tidak sesuai. Pastikan ada kolom 'Data Mesin', 'Plan', 'Notes', dan 'Status'.");
           return;
         }
 
-        // Tambahkan ke tab aktif
         const formatted = jsonData.map(row => ({
-          machine: row['Data Mesin'] || '',
-          notes: row['Plan'] || '',
-          status: (row['Status'] || '').toLowerCase() === 'done' ? 'done' : 'outstanding'
+          machineData: row['Data Mesin'] || '',
+          period: row['Plan'] || 'Jan', // pakai nilai dari Excel atau default
+          notes: row['Notes'] || '',
+          status: (row['Status'] || '').toLowerCase() === 'done' ? 'Done' : 'Outstanding'
         }));
 
         tabs[currentTab].data.push(...formatted);
@@ -409,6 +410,7 @@ function importData(event) {
     alert("Format file tidak didukung. Gunakan .json atau .xlsx");
   }
 }
+
 // Modal system functions
 function showConfirmModal(message, action, options = {}) {
     const {
