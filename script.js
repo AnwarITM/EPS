@@ -375,23 +375,25 @@ function importData(event) {
       }
     };
     reader.readAsText(file);
-  } else if (fileName.endsWith('.xlsx')) {
-    // Import dari Excel ke tab aktif saja
+  }
+
+  else if (fileName.endsWith('.xlsx')) {
+    // Import dari Excel (arrayBuffer untuk dukungan lebih luas)
     reader.onload = function (e) {
       try {
-        const workbook = XLSX.read(e.target.result, { type: 'binary' });
+        const workbook = XLSX.read(e.target.result, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
         if (!jsonData.length || !jsonData[0]['Data Mesin']) {
-          alert("Format Excel tidak sesuai. Pastikan ada kolom 'Data Mesin', 'Plan', 'Notes', dan 'Status'.");
+          alert("Format Excel tidak sesuai. Pastikan kolom 'Data Mesin', 'Plan', 'Notes', dan 'Status' tersedia.");
           return;
         }
 
         const formatted = jsonData.map(row => ({
           machineData: row['Data Mesin'] || '',
-          period: row['Plan'] || 'Jan', // pakai nilai dari Excel atau default
+          period: row['Plan'] || 'Jan',
           notes: row['Notes'] || '',
           status: (row['Status'] || '').toLowerCase() === 'done' ? 'Done' : 'Outstanding'
         }));
@@ -405,12 +407,14 @@ function importData(event) {
         alert("Gagal mengimpor Excel: " + err.message);
       }
     };
-    reader.readAsBinaryString(file);
-  } else {
+
+    reader.readAsArrayBuffer(file); // ✅ Lebih stabil dari binaryString
+  }
+
+  else {
     alert("Format file tidak didukung. Gunakan .json atau .xlsx");
   }
 }
-
 // Modal system functions
 function showConfirmModal(message, action, options = {}) {
     const {
