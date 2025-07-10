@@ -351,43 +351,64 @@ function exportData() {
 }
 
 function importData(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+  const file = event.target.files[0];
+  const reader = new FileReader();
+  const fileName = file.name.toLowerCase();
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const importedData = JSON.parse(e.target.result);
-            if (Array.isArray(importedData) && importedData.every(item =>
-                item.machineData && typeof item.machineData === 'string' &&
-                monthOrder.includes(item.period) &&
-                ['Done', 'Outstanding'].includes(item.status)
-            )) {
-                showConfirmModal(
-                    'Import will replace current tab data. Continue?',
-                    () => {
-                        tabs[currentTab].data = importedData;
-                        saveToLocalStorage();
-                        renderTable();
-                        updateStats();
-                        document.getElementById('importFile').value = '';
-                    },
-                    {
-                        btnText: 'Import',
-                        title: 'Import Data'
-                    }
-                );
-            } else {
-                showAlertModal('Invalid JSON format or data structure!');
-            }
-        } catch (error) {
-            console.error('Error reading JSON file:', error);
-            showAlertModal('Error reading JSON file: ' + error.message);
-        }
+  if (fileName.endsWith('.json')) {
+    // Import dari JSON (lama, tetap didukung)
+    reader.onload = function (e) {
+      try {
+        const importedTabs = JSON.parse(e.target.result);
+        if (!Array.isArray(importedTabs)) throw new Error("Invalid JSON structure");
+        tabs = importedTabs;
+        currentTab = 0;
+        saveTabs();
+        renderTabs();
+        renderTable();
+        updateStats();
+        alert("Data berhasil diimpor dari JSON.");
+      } catch (err) {
+        alert("Gagal mengimpor JSON: " + err.message);
+      }
     };
     reader.readAsText(file);
-}
+  } else if (fileName.endsWith('.xlsx')) {
+    // Import dari Excel ke tab aktif saja
+    reader.onload = function (e) {
+      try {
+        const workbook = XLSX.read(e.target.result, { type: 'binary' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
+        // Validasi minimal
+        if (!jsonData.length || !jsonData[0]['Data Mesin']) {
+          alert("Format Excel tidak sesuai. Pastikan ada kolom 'Data Mesin', 'Plan', dan 'Status'.");
+          return;
+        }
+
+        // Tambahkan ke tab aktif
+        const formatted = jsonData.map(row => ({
+          machine: row['Data Mesin'] || '',
+          notes: row['Plan'] || '',
+          status: (row['Status'] || '').toLowerCase() === 'done' ? 'done' : 'outstanding'
+        }));
+
+        tabs[currentTab].data.push(...formatted);
+        saveTabs();
+        renderTable();
+        updateStats();
+        alert("Data berhasil diimpor dari Excel ke tab aktif.");
+      } catch (err) {
+        alert("Gagal mengimpor Excel: " + err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+  } else {
+    alert("Format file tidak didukung. Gunakan .json atau .xlsx");
+  }
+}
 // Modal system functions
 function showConfirmModal(message, action, options = {}) {
     const {
