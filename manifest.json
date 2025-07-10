@@ -2,7 +2,7 @@
   "name": "Task Manager - Multi Tab",
   "short_name": "TaskManager",
   "description": "Professional Task Manager with Multi-Tab Support",
-  "start_url": "/EPS/app.html",
+  "start_url": "/EPS/index.html",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#00e5ff",
