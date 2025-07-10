@@ -1,30 +1,32 @@
 :root {
   /* Warna dasar */
-  --bg-color: #273F4F;
-  --card-bg: rgba(20, 26, 42, 0.7);     /* ← transparansi di sini */
-  --text-color: #dce3f2;
-  --border-color: rgba(255, 255, 255, 0.1);
+  --bg-color: #000000;              /* hitam pekat */
+  --card-bg: rgba(10,10,20,0.5);               /* blok konten sedikit lebih terang */
+  --text-color: #f0f0f0;            /* abu terang */
+  --border-color: #1a1a1a;          /* garis sangat gelap */
 
   /* Warna utama & status */
-  --primary-color: #8ab4f8;
-  --danger-color: #ff6b81;
-  --success-color: #7fffd4;
-  --text-secondary: #98a6bd;
-  --header-text-color: #ffffff;
+  --primary-color: #3b82f6;         /* biru standar (masih terbaca) */
+  --danger-color: #ef4444;          /* merah terang */
+  --success-color: #10b981;         /* hijau emerald */
+  --text-secondary: #999999;        /* abu soft */
+  --header-text-color: #ffffff;     /* putih untuk judul utama */
 
   /* Hover & status */
-  --primary-hover: #6ea8fc;
-  --status-done-bg: rgba(127, 255, 212, 0.08);
-  --status-outstanding-bg: rgba(255, 107, 129, 0.08);
+  --primary-hover: #2563eb;
+  --status-done-bg: rgba(16, 185, 129, 0.08);
+  --status-outstanding-bg: rgba(239, 68, 68, 0.08);
 
-  /* Shadow */
+  /* Shadow efek ringan */
   --shadow-sm: 0 1px 2px rgba(255, 255, 255, 0.05);
-  --shadow-md: 0 4px 6px rgba(255, 255, 255, 0.08);
+  --shadow-md: 0 4px 6px rgba(255, 255, 255, 0.07);
   --shadow-lg: 0 10px 15px rgba(255, 255, 255, 0.1);
 
-  /* Gradien */
-  --gradient-primary: linear-gradient(145deg, #8ab4f8 0%, #cbd5e1 100%);
+  /* Gradien utama */
+  --gradient-primary: linear-gradient(135deg, #111111, #333333);
 }
+
+
 
 /* === BACKGROUND === */
 body {
