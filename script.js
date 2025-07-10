@@ -335,17 +335,19 @@ function sortByPeriod() {
 
 // Import/Export functions
 function exportData() {
-    const data = tabs[currentTab].data;
-    const jsonString = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `data-tab-${currentTab + 1}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const activeTab = tabs[currentTab];
+  const exportRows = activeTab.data.map((item, index) => ({
+    No: index + 1,
+    "Data Mesin": item.machine,
+    Plan: item.notes,
+    Status: item.status
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(exportRows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, activeTab.name || "Sheet1");
+
+  XLSX.writeFile(workbook, (activeTab.name || "data") + ".xlsx");
 }
 
 function importData(event) {
