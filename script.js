@@ -1,5 +1,8 @@
 'use strict';
 
+// Log pemuatan skrip
+console.log('script.js dimuat di Android');
+
 // Data dan variabel global
 let tabs = [{ id: 0, name: 'Tab 1', data: [] }];
 let currentTab = 0;
@@ -14,10 +17,12 @@ function initializeData() {
     try {
         const savedTheme = localStorage.getItem('theme') || 'light';
         const themeLink = document.getElementById('theme-link');
-        if (!themeLink) throw new Error('Element theme-link tidak ditemukan');
-        themeLink.href = savedTheme === 'dark' ? 'theme-dark.css' : 'theme-light.css';
-
-        document.body.classList.toggle('dark', savedTheme === 'dark');
+        if (!themeLink) {
+            console.warn('Element theme-link tidak ditemukan, menggunakan tema default');
+        } else {
+            themeLink.href = savedTheme === 'dark' ? 'theme-dark.css' : 'theme-light.css';
+            document.body.classList.toggle('dark', savedTheme === 'dark');
+        }
 
         if (!isLocalStorageAvailable()) {
             console.warn('Local storage tidak tersedia');
@@ -42,7 +47,7 @@ function initializeData() {
         updateHeaderTitle();
     } catch (error) {
         console.error('Error inisialisasi data:', error);
-        showAlertModal('Gagal menginisialisasi data. Periksa konsol untuk detail.');
+        showAlertModal('Gagal menginisialisasi data. Coba hapus data browser atau periksa file di repositori.');
     }
 }
 
@@ -59,7 +64,10 @@ function isLocalStorageAvailable() {
 function toggleTheme() {
     try {
         const themeLink = document.getElementById('theme-link');
-        if (!themeLink) throw new Error('Element theme-link tidak ditemukan');
+        if (!themeLink) {
+            console.warn('Element theme-link tidak ditemukan');
+            return;
+        }
         const body = document.body;
         const currentTheme = localStorage.getItem('theme') || 'light';
 
@@ -74,7 +82,7 @@ function toggleTheme() {
         }
     } catch (error) {
         console.error('Error mengganti tema:', error);
-        showAlertModal('Gagal mengganti tema. Periksa konsol untuk detail.');
+        showAlertModal('Gagal mengganti tema.');
     }
 }
 
@@ -170,7 +178,7 @@ function updateHeaderTitle() {
     console.log('updateHeaderTitle dipanggil');
     const header = document.querySelector('h1');
     if (header) header.textContent = tabs[currentTab].name;
-    else console.error('Header h1 tidak ditemukan');
+    else console.warn('Header h1 tidak ditemukan');
 }
 
 function updateRemoveTabButton() {
@@ -179,7 +187,7 @@ function updateRemoveTabButton() {
     if (removeTabBtn) {
         removeTabBtn.style.display = currentTab === 0 ? 'none' : 'inline-block';
     } else {
-        console.error('Elemen removeTabBtn tidak ditemukan');
+        console.warn('Elemen removeTabBtn tidak ditemukan');
     }
 }
 
@@ -255,11 +263,11 @@ function updateStats() {
     const outstandingStat = document.getElementById('outstandingStat');
 
     if (totalStat) totalStat.textContent = total;
-    else console.error('Elemen totalStat tidak ditemukan');
+    else console.warn('Elemen totalStat tidak ditemukan');
     if (doneStat) doneStat.textContent = done;
-    else console.error('Elemen doneStat tidak ditemukan');
+    else console.warn('Elemen doneStat tidak ditemukan');
     if (outstandingStat) outstandingStat.textContent = outstanding;
-    else console.error('Elemen outstandingStat tidak ditemukan');
+    else console.warn('Elemen outstandingStat tidak ditemukan');
 }
 
 // Manajemen data
@@ -410,7 +418,7 @@ function sortByPeriod() {
 function exportData() {
     if (typeof XLSX === 'undefined') {
         console.error('Library XLSX tidak ditemukan');
-        showAlertModal('Library Excel tidak ditemukan. Pastikan terhubung ke internet atau sertakan library lokal.');
+        showAlertModal('Library Excel tidak ditemukan. Gunakan file lokal atau periksa koneksi internet.');
         return;
     }
     const activeTab = tabs[currentTab];
@@ -464,7 +472,7 @@ function importData(event) {
     } else if (fileName.endsWith('.xlsx')) {
         if (typeof XLSX === 'undefined') {
             console.error('Library XLSX tidak ditemukan');
-            showAlertModal('Library Excel tidak ditemukan. Pastikan terhubung ke internet atau sertakan library lokal.');
+            showAlertModal('Library Excel tidak ditemukan. Gunakan file lokal atau periksa koneksi internet.');
             document.getElementById('importFile').value = '';
             return;
         }
@@ -511,7 +519,7 @@ function resetAndOpenImport() {
     const fileInput = document.getElementById('importFile');
     if (!fileInput) {
         console.error('Elemen input file tidak ditemukan');
-        showAlertModal('Elemen input file tidak ditemukan. Periksa HTML.');
+        showAlertModal('Elemen input file tidak ditemukan. Periksa struktur file di repositori.');
         return;
     }
     fileInput.value = '';
@@ -563,11 +571,12 @@ function showAlertModal(message, title = 'Peringatan') {
 function saveToLocalStorage() {
     try {
         localStorage.setItem('tabs', JSON.stringify(tabs));
-        const theme = document.getElementById('theme-link').href.includes('dark') ? 'dark' : 'light';
+        const themeLink = document.getElementById('theme-link');
+        const theme = themeLink && themeLink.href.includes('dark') ? 'dark' : 'light';
         localStorage.setItem('theme', theme);
     } catch (error) {
         console.error('Error menyimpan ke localStorage:', error);
-        showAlertModal('Gagal menyimpan data. Local storage mungkin penuh atau dinonaktifkan.');
+        showAlertModal('Gagal menyimpan data. Coba hapus data browser.');
     }
 }
 
@@ -599,6 +608,6 @@ function loadFromLocalStorage() {
 
 // Inisialisasi aplikasi saat DOM dimuat
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('script.js dimuat');
+    console.log('DOMContentLoaded dipicu, memulai inisialisasi di Android');
     initializeData();
 });
