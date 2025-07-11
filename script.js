@@ -113,6 +113,7 @@ function removeTab() {
 }
 
 function switchTab(index) {
+    console.log('switchTab dipanggil untuk index:', index);
     currentTab = index;
     renderTabs();
     renderTable();
@@ -166,18 +167,24 @@ function confirmRenameTab() {
 
 // Update UI
 function updateHeaderTitle() {
+    console.log('updateHeaderTitle dipanggil');
     const header = document.querySelector('h1');
     if (header) header.textContent = tabs[currentTab].name;
+    else console.error('Header h1 tidak ditemukan');
 }
 
 function updateRemoveTabButton() {
+    console.log('updateRemoveTabButton dipanggil');
     const removeTabBtn = document.getElementById('removeTabBtn');
     if (removeTabBtn) {
         removeTabBtn.style.display = currentTab === 0 ? 'none' : 'inline-block';
+    } else {
+        console.error('Elemen removeTabBtn tidak ditemukan');
     }
 }
 
 function renderTabs() {
+    console.log('renderTabs dipanggil');
     const tabsContainer = document.getElementById('tabs');
     if (!tabsContainer) {
         console.error('Kontainer tab tidak ditemukan');
@@ -194,6 +201,7 @@ function renderTabs() {
 }
 
 function renderTable() {
+    console.log('renderTable dipanggil');
     const tbody = document.getElementById('tableBody');
     if (!tbody) {
         console.error('Tabel body tidak ditemukan');
@@ -236,6 +244,7 @@ function renderTable() {
 }
 
 function updateStats() {
+    console.log('updateStats dipanggil');
     const data = tabs[currentTab].data;
     const total = data.length;
     const done = data.filter(item => item.status === 'Done').length;
@@ -246,8 +255,11 @@ function updateStats() {
     const outstandingStat = document.getElementById('outstandingStat');
 
     if (totalStat) totalStat.textContent = total;
+    else console.error('Elemen totalStat tidak ditemukan');
     if (doneStat) doneStat.textContent = done;
+    else console.error('Elemen doneStat tidak ditemukan');
     if (outstandingStat) outstandingStat.textContent = outstanding;
+    else console.error('Elemen outstandingStat tidak ditemukan');
 }
 
 // Manajemen data
@@ -563,19 +575,25 @@ function loadFromLocalStorage() {
     if (!isLocalStorageAvailable()) return;
     const savedTabs = localStorage.getItem('tabs');
     if (savedTabs) {
-        tabs = JSON.parse(savedTabs);
-        tabs.forEach(tab => {
-            if (!tab.data) tab.data = [];
-            const validData = tab.data.filter(item =>
-                item && item.machineData && typeof item.machineData === 'string' &&
-                monthOrder.includes(item.period) &&
-                ['Done', 'Outstanding'].includes(item.status)
-            );
-            if (validData.length !== tab.data.length) {
-                console.warn(`Menghapus ${tab.data.length - validData.length} data tidak valid di tab ${tab.name}`);
-            }
-            tab.data = validData;
-        });
+        try {
+            tabs = JSON.parse(savedTabs);
+            tabs.forEach(tab => {
+                if (!tab.data) tab.data = [];
+                const validData = tab.data.filter(item =>
+                    item && item.machineData && typeof item.machineData === 'string' &&
+                    monthOrder.includes(item.period) &&
+                    ['Done', 'Outstanding'].includes(item.status)
+                );
+                if (validData.length !== tab.data.length) {
+                    console.warn(`Menghapus ${tab.data.length - validData.length} data tidak valid di tab ${tab.name}`);
+                }
+                tab.data = validData;
+            });
+        } catch (error) {
+            console.error('Error parsing tabs dari localStorage:', error);
+            tabs = [{ id: 0, name: 'Tab 1', data: [] }];
+            saveToLocalStorage();
+        }
     }
 }
 
