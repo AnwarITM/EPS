@@ -1,65 +1,31 @@
-// ====================== VARIABEL GLOBAL ======================
+'use strict';
+
+// Data dan variabel global
 let tabs = [{ id: 0, name: 'Tab 1', data: [] }];
 let currentTab = 0;
 let editIndex = -1;
 let pendingAction = null;
-let loader = null;
 
 const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// ====================== LOADER DINAMIS ======================
-function createLoader() {
-    const loader = document.createElement('div');
-    loader.id = 'dynamic-loader';
-    loader.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 9999;
-        border: 5px solid #f3f3f3;
-        border-top: 5px solid #3498db;
-        border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        animation: spin 1s linear infinite;
-        display: none;
-    `;
-
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes spin {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-    `;
-    
-    document.head.appendChild(style);
-    document.body.appendChild(loader);
-    return loader;
-}
-
-function showLoader(show) {
-    if (!loader) loader = createLoader();
-    loader.style.display = show ? 'block' : 'none';
-    document.body.style.pointerEvents = show ? 'none' : '';
-    document.body.style.cursor = show ? 'wait' : '';
-}
-
-// ====================== INISIALISASI APLIKASI ======================
+// Inisialisasi aplikasi
 function initializeData() {
+    console.log('initializeData dipanggil');
     try {
         const savedTheme = localStorage.getItem('theme') || 'light';
         const themeLink = document.getElementById('theme-link');
+        if (!themeLink) throw new Error('Element theme-link tidak ditemukan');
         themeLink.href = savedTheme === 'dark' ? 'theme-dark.css' : 'theme-light.css';
 
-        if (savedTheme === 'dark') {
-            document.body.classList.add('dark');
-        } else {
-            document.body.classList.remove('dark');
-        }
+        document.body.classList.toggle('dark', savedTheme === 'dark');
 
-        if (!localStorage.getItem('tabs')) {
+        if (!isLocalStorageAvailable()) {
+            console.warn('Local storage tidak tersedia');
+            tabs[0].data = [
+                { machineData: 'Machine A', period: 'Jan', status: 'Done', notes: 'Initial check' },
+                { machineData: 'Machine B', period: 'Feb', status: 'Outstanding', notes: '' }
+            ];
+        } else if (!localStorage.getItem('tabs')) {
             tabs[0].data = [
                 { machineData: 'Machine A', period: 'Jan', status: 'Done', notes: 'Initial check' },
                 { machineData: 'Machine B', period: 'Feb', status: 'Outstanding', notes: '' }
@@ -74,22 +40,51 @@ function initializeData() {
         updateStats();
         updateRemoveTabButton();
         updateHeaderTitle();
-        
-        // Pre-create loader
-        loader = createLoader();
     } catch (error) {
-        console.error('Error initializing data:', error);
-        showAlertModal('Failed to initialize data. Check console for details.');
+        console.error('Error inisialisasi data:', error);
+        showAlertModal('Gagal menginisialisasi data. Periksa konsol untuk detail.');
     }
 }
 
-// ====================== MANAJEMEN TAB ======================
+// Cek ketersediaan localStorage
+function isLocalStorageAvailable() {
+    try {
+        return typeof localStorage !== 'undefined' && localStorage !== null;
+    } catch (e) {
+        return false;
+    }
+}
+
+// Toggle tema
+function toggleTheme() {
+    try {
+        const themeLink = document.getElementById('theme-link');
+        if (!themeLink) throw new Error('Element theme-link tidak ditemukan');
+        const body = document.body;
+        const currentTheme = localStorage.getItem('theme') || 'light';
+
+        if (currentTheme === 'light') {
+            themeLink.href = 'theme-dark.css';
+            body.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            themeLink.href = 'theme-light.css';
+            body.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    } catch (error) {
+        console.error('Error mengganti tema:', error);
+        showAlertModal('Gagal mengganti tema. Periksa konsol untuk detail.');
+    }
+}
+
+// Manajemen tab
 function addTab() {
     if (tabs.length >= 5) {
-        showAlertModal('Maximum 5 tabs allowed!');
+        showAlertModal('Maksimum 5 tab diperbolehkan!');
         return;
     }
-    const newTab = { id: tabs.length, name: `Tab ${tabs.length + 1}`, data: [] };
+    const newTab = { id: Math.max(...tabs.map(t => t.id), -1) + 1, name: `Tab ${tabs.length + 1}`, data: [] };
     tabs.push(newTab);
     switchTab(tabs.length - 1);
     saveToLocalStorage();
@@ -97,20 +92,21 @@ function addTab() {
 
 function removeTab() {
     if (currentTab === 0) {
-        showAlertModal('Cannot delete first tab!');
+        showAlertModal('Tab pertama tidak bisa dihapus!');
         return;
     }
     
     showConfirmModal(
-        'Delete this tab and all its data?',
+        'Hapus tab ini dan semua datanya?',
         () => {
             tabs.splice(currentTab, 1);
+            tabs.forEach((tab, index) => tab.id = index);
             switchTab(0);
             saveToLocalStorage();
         },
         {
-            btnText: 'Delete Tab',
-            title: 'Delete Tab',
+            btnText: 'Hapus Tab',
+            title: 'Hapus Tab',
             btnClass: 'danger-btn'
         }
     );
@@ -125,9 +121,68 @@ function switchTab(index) {
     updateHeaderTitle();
 }
 
-// ====================== RENDER UI ======================
+// Rename tab
+function renameTab() {
+    const renameModal = document.getElementById('renameModal');
+    if (!renameModal) {
+        console.error('Modal rename tidak ditemukan');
+        return;
+    }
+    renameModal.style.display = 'flex';
+    document.getElementById('newTabName').value = tabs[currentTab].name;
+    document.getElementById('newTabName').focus();
+}
+
+function closeRenameModal() {
+    const renameModal = document.getElementById('renameModal');
+    if (renameModal) renameModal.style.display = 'none';
+}
+
+function confirmRenameTab() {
+    const loader = document.getElementById('renameLoader');
+    if (!loader) {
+        console.error('Loader rename tidak ditemukan');
+        return;
+    }
+    loader.style.display = 'block';
+    
+    setTimeout(() => {
+        const newName = document.getElementById('newTabName').value.trim();
+        
+        if (!newName) {
+            showAlertModal('Nama tab tidak boleh kosong!');
+            loader.style.display = 'none';
+            return;
+        }
+        
+        tabs[currentTab].name = newName;
+        saveToLocalStorage();
+        renderTabs();
+        updateHeaderTitle();
+        closeRenameModal();
+        loader.style.display = 'none';
+    }, 500);
+}
+
+// Update UI
+function updateHeaderTitle() {
+    const header = document.querySelector('h1');
+    if (header) header.textContent = tabs[currentTab].name;
+}
+
+function updateRemoveTabButton() {
+    const removeTabBtn = document.getElementById('removeTabBtn');
+    if (removeTabBtn) {
+        removeTabBtn.style.display = currentTab === 0 ? 'none' : 'inline-block';
+    }
+}
+
 function renderTabs() {
     const tabsContainer = document.getElementById('tabs');
+    if (!tabsContainer) {
+        console.error('Kontainer tab tidak ditemukan');
+        return;
+    }
     tabsContainer.innerHTML = '';
     tabs.forEach((tab, index) => {
         const tabElement = document.createElement('div');
@@ -140,16 +195,23 @@ function renderTabs() {
 
 function renderTable() {
     const tbody = document.getElementById('tableBody');
+    if (!tbody) {
+        console.error('Tabel body tidak ditemukan');
+        return;
+    }
     tbody.innerHTML = '';
     tabs[currentTab].data.forEach((item, index) => {
-        if (!item || !item.machineData || !item.period || !item.status) return;
+        if (!item || !item.machineData || !item.period || !item.status) {
+            console.warn('Data tidak valid:', item);
+            return;
+        }
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${index + 1}</td>
             <td>
                 <span class="machine-data ${item.notes && item.notes.trim() ? 'has-notes' : ''}"
                     onclick="showEditModal(${index})"
-                    title="Click to edit machine name & notes">
+                    title="Klik untuk edit nama mesin & catatan">
                     ${item.machineData}
                 </span>
                 ${item.notes && item.notes.trim() ? `<span class="notes-marquee">${item.notes}</span>` : ''}
@@ -166,7 +228,7 @@ function renderTable() {
                 </select>
             </td>
             <td>
-                <button class="delete-btn" onclick="deleteData(${index})" title="Delete Data">Delete</button>
+                <button class="delete-btn" onclick="deleteData(${index})" title="Hapus Data">Hapus</button>
             </td>
         `;
         tbody.appendChild(row);
@@ -179,30 +241,63 @@ function updateStats() {
     const done = data.filter(item => item.status === 'Done').length;
     const outstanding = total - done;
 
-    document.getElementById('totalStat').textContent = total;
-    document.getElementById('doneStat').textContent = done;
-    document.getElementById('outstandingStat').textContent = outstanding;
+    const totalStat = document.getElementById('totalStat');
+    const doneStat = document.getElementById('doneStat');
+    const outstandingStat = document.getElementById('outstandingStat');
+
+    if (totalStat) totalStat.textContent = total;
+    if (doneStat) doneStat.textContent = done;
+    if (outstandingStat) outstandingStat.textContent = outstanding;
 }
 
-// ====================== MANAJEMEN DATA ======================
+// Manajemen data
 function showAddModal() {
     editIndex = -1;
-    document.getElementById('addModal').style.display = 'flex';
-    document.getElementById('modalTitle').textContent = 'Add Data';
+    const addModal = document.getElementById('addModal');
+    if (!addModal) {
+        console.error('Modal tambah/edit tidak ditemukan');
+        return;
+    }
+    addModal.style.display = 'flex';
+    document.getElementById('modalTitle').textContent = 'Tambah Data';
     document.getElementById('machineData').value = '';
     document.getElementById('notes').value = '';
     document.getElementById('machineData').disabled = false;
 }
 
+function showEditModal(index) {
+    editIndex = index;
+    const item = tabs[currentTab].data[index];
+    const addModal = document.getElementById('addModal');
+    if (!addModal) {
+        console.error('Modal tambah/edit tidak ditemukan');
+        return;
+    }
+    addModal.style.display = 'flex';
+    document.getElementById('modalTitle').textContent = 'Edit Data';
+    document.getElementById('machineData').value = item.machineData;
+    document.getElementById('notes').value = item.notes || '';
+    document.getElementById('machineData').disabled = false;
+}
+
+function closeModal() {
+    const addModal = document.getElementById('addModal');
+    if (addModal) addModal.style.display = 'none';
+}
+
 function saveData() {
     const loader = document.getElementById('loader');
+    if (!loader) {
+        console.error('Loader tidak ditemukan');
+        return;
+    }
     loader.style.display = 'block';
     setTimeout(() => {
-        const machineData = document.getElementById('machineData').value;
-        const notes = document.getElementById('notes').value;
+        const machineData = document.getElementById('machineData').value.trim();
+        const notes = document.getElementById('notes').value.trim();
 
-        if (!machineData && editIndex === -1) {
-            showAlertModal('Machine Data is required!');
+        if (!machineData) {
+            showAlertModal('Data Mesin wajib diisi!');
             loader.style.display = 'none';
             return;
         }
@@ -227,87 +322,265 @@ function saveData() {
     }, 500);
 }
 
-// ====================== IMPORT/EXPORT (PERBAIKAN) ======================
-function resetAndOpenImport() {
-    const fileInput = document.getElementById('importFile');
-    fileInput.value = '';
-    fileInput.click();
+function updatePeriod(index, value) {
+    tabs[currentTab].data[index].period = value;
+    saveToLocalStorage();
+    renderTable();
+    updateStats();
 }
 
-async function importData(event) {
-    showLoader(true);
-    
-    try {
-        const file = event.target.files[0];
-        if (!file) return;
+function updateStatus(index, value) {
+    tabs[currentTab].data[index].status = value;
+    saveToLocalStorage();
+    renderTable();
+    updateStats();
+}
 
-        const fileName = file.name.toLowerCase();
-        
-        if (!fileName.endsWith('.json') && !fileName.endsWith('.xlsx')) {
-            throw new Error("Only .json or .xlsx files are supported");
+function deleteData(index) {
+    showConfirmModal(
+        'Yakin ingin menghapus data ini?',
+        () => {
+            tabs[currentTab].data.splice(index, 1);
+            saveToLocalStorage();
+            renderTable();
+            updateStats();
+        },
+        {
+            btnText: 'Hapus',
+            title: 'Hapus Data',
+            btnClass: 'danger-btn'
         }
+    );
+}
 
-        const fileData = await readFile(file);
-        const parsedData = fileName.endsWith('.json') 
-            ? await parseJson(fileData) 
-            : await parseExcel(fileData);
+function deleteAll() {
+    showConfirmModal(
+        'Hapus SEMUA data di tab ini?',
+        () => {
+            tabs[currentTab].data = [];
+            saveToLocalStorage();
+            renderTable();
+            updateStats();
+        },
+        {
+            btnText: 'Hapus Semua',
+            title: 'Hapus Semua Data',
+            btnClass: 'danger-btn'
+        }
+    );
+}
 
-        tabs[currentTab].data = parsedData;
-        saveToLocalStorage();
-        renderTable();
-        updateStats();
-        
-        showAlertModal(`Import successful! ${parsedData.length} items added.`);
-    } catch (error) {
-        console.error("Import error:", error);
-        showAlertModal(`Import failed: ${error.message}`);
-    } finally {
-        showLoader(false);
-        event.target.value = '';
+function resetStatus() {
+    showConfirmModal(
+        'Reset semua status ke Outstanding?',
+        () => {
+            tabs[currentTab].data.forEach(item => item.status = 'Outstanding');
+            saveToLocalStorage();
+            renderTable();
+            updateStats();
+        },
+        {
+            btnText: 'Reset',
+            title: 'Reset Status'
+        }
+    );
+}
+
+function sortByPeriod() {
+    tabs[currentTab].data = tabs[currentTab].data.filter(item => monthOrder.includes(item.period));
+    tabs[currentTab].data.sort((a, b) => monthOrder.indexOf(a.period) - monthOrder.indexOf(b.period));
+    saveToLocalStorage();
+    renderTable();
+    updateStats();
+}
+
+// Import/Export
+function exportData() {
+    if (typeof XLSX === 'undefined') {
+        console.error('Library XLSX tidak ditemukan');
+        showAlertModal('Library Excel tidak ditemukan. Pastikan terhubung ke internet atau sertakan library lokal.');
+        return;
+    }
+    const activeTab = tabs[currentTab];
+    const exportRows = activeTab.data.map((item, index) => ({
+        No: index + 1,
+        "Data Mesin": item.machineData || '',
+        Plan: item.period || '',
+        Notes: item.notes || '',
+        Status: item.status || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, activeTab.name || "Sheet1");
+    XLSX.writeFile(workbook, (activeTab.name || "data") + ".xlsx");
+}
+
+function importData(event) {
+    console.log('importData dipanggil dengan file:', event.target.files[0]?.name);
+    const file = event.target.files[0];
+    if (!file) {
+        console.error('Tidak ada file yang dipilih');
+        showAlertModal('Tidak ada file yang dipilih.');
+        return;
+    }
+
+    const reader = new FileReader();
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith('.json')) {
+        reader.onload = function (e) {
+            try {
+                const importedTabs = JSON.parse(e.target.result);
+                if (!Array.isArray(importedTabs) || !importedTabs.every(tab => tab.id !== undefined && tab.name && Array.isArray(tab.data))) {
+                    throw new Error("Struktur JSON tidak valid. Harus berupa array tab dengan properti id, name, dan data.");
+                }
+                tabs = importedTabs;
+                currentTab = 0;
+                saveToLocalStorage();
+                renderTabs();
+                renderTable();
+                updateStats();
+                showAlertModal('Data berhasil diimpor dari JSON.');
+            } catch (err) {
+                console.error('Error impor JSON:', err);
+                showAlertModal('Gagal mengimpor JSON: ' + err.message);
+            }
+            document.getElementById('importFile').value = '';
+        };
+        reader.readAsText(file);
+    } else if (fileName.endsWith('.xlsx')) {
+        if (typeof XLSX === 'undefined') {
+            console.error('Library XLSX tidak ditemukan');
+            showAlertModal('Library Excel tidak ditemukan. Pastikan terhubung ke internet atau sertakan library lokal.');
+            document.getElementById('importFile').value = '';
+            return;
+        }
+        reader.onload = function (e) {
+            try {
+                const workbook = XLSX.read(e.target.result, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                if (!jsonData.length || !jsonData[0]['Data Mesin'] || !jsonData[0]['Plan'] || !jsonData[0]['Status']) {
+                    showAlertModal("Format Excel tidak sesuai. Kolom yang diperlukan: 'Data Mesin', 'Plan', 'Status'. Kolom 'Notes' opsional.");
+                    document.getElementById('importFile').value = '';
+                    return;
+                }
+
+                const formatted = jsonData.map(row => ({
+                    machineData: row['Data Mesin'] || '',
+                    period: row['Plan'] || 'Jan',
+                    notes: row['Notes'] || '',
+                    status: (row['Status'] || '').toLowerCase() === 'done' ? 'Done' : 'Outstanding'
+                }));
+
+                tabs[currentTab].data.push(...formatted);
+                saveToLocalStorage();
+                renderTable();
+                updateStats();
+                showAlertModal('Data berhasil diimpor dari Excel ke tab aktif.');
+            } catch (err) {
+                console.error('Error impor Excel:', err);
+                showAlertModal('Gagal mengimpor Excel: ' + err.message);
+            }
+            document.getElementById('importFile').value = '';
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        showAlertModal('Format file tidak didukung. Gunakan .json atau .xlsx');
+        document.getElementById('importFile').value = '';
     }
 }
 
-// Helper functions untuk import
-function readFile(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = () => reject(new Error("Failed to read file"));
-        reader[file.name.endsWith('.json') ? 'readAsText' : 'readAsArrayBuffer'](file);
-    });
+function resetAndOpenImport() {
+    console.log('resetAndOpenImport dipanggil');
+    const fileInput = document.getElementById('importFile');
+    if (!fileInput) {
+        console.error('Elemen input file tidak ditemukan');
+        showAlertModal('Elemen input file tidak ditemukan. Periksa HTML.');
+        return;
+    }
+    fileInput.value = '';
+    fileInput.click();
+    console.log('Input file dipicu');
 }
 
-function parseJson(jsonStr) {
-    const data = JSON.parse(jsonStr);
-    if (!Array.isArray(data)) throw new Error("Invalid JSON format");
-    return data.map(item => ({
-        machineData: item.machineData || '',
-        period: item.period || 'Jan',
-        status: item.status === 'Done' ? 'Done' : 'Outstanding',
-        notes: item.notes || ''
-    }));
-}
-
-function parseExcel(arrayBuffer) {
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+// Sistem modal
+function showConfirmModal(message, action, options = {}) {
+    const { btnText = 'Konfirmasi', title = 'Konfirmasi', btnClass = '' } = options;
     
-    return jsonData.map(row => {
-        const status = row.Status || row.status;
-        return {
-            machineData: row['Data Mesin'] || row.machineData || '',
-            period: row.Plan || row.period || 'Jan',
-            status: status && status.toString().toLowerCase() === 'done' ? 'Done' : 'Outstanding',
-            notes: row.Notes || row.notes || ''
-        };
+    const confirmModal = document.getElementById('confirmModal');
+    if (!confirmModal) {
+        console.error('Modal konfirmasi tidak ditemukan');
+        return;
+    }
+    
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    const confirmBtn = document.getElementById('confirmActionBtn');
+    confirmBtn.textContent = btnText;
+    confirmBtn.className = btnClass || '';
+    pendingAction = action;
+    confirmModal.style.display = 'flex';
+}
+
+function closeConfirmModal() {
+    const confirmModal = document.getElementById('confirmModal');
+    if (confirmModal) {
+        confirmModal.style.display = 'none';
+        pendingAction = null;
+    }
+}
+
+function executeConfirmedAction() {
+    if (pendingAction) pendingAction();
+    closeConfirmModal();
+}
+
+function showAlertModal(message, title = 'Peringatan') {
+    showConfirmModal(message, () => {}, {
+        btnText: 'OK',
+        title: title,
+        btnClass: 'btn-secondary'
     });
 }
 
-// ====================== FUNGSI TAMBAHAN ======================
-function showAlertModal(message) {
-    alert(message); // Ganti dengan modal custom jika tersedia
+// Local storage
+function saveToLocalStorage() {
+    try {
+        localStorage.setItem('tabs', JSON.stringify(tabs));
+        const theme = document.getElementById('theme-link').href.includes('dark') ? 'dark' : 'light';
+        localStorage.setItem('theme', theme);
+    } catch (error) {
+        console.error('Error menyimpan ke localStorage:', error);
+        showAlertModal('Gagal menyimpan data. Local storage mungkin penuh atau dinonaktifkan.');
+    }
 }
 
-// Inisialisasi aplikasi
-document.addEventListener('DOMContentLoaded', initializeData);
+function loadFromLocalStorage() {
+    if (!isLocalStorageAvailable()) return;
+    const savedTabs = localStorage.getItem('tabs');
+    if (savedTabs) {
+        tabs = JSON.parse(savedTabs);
+        tabs.forEach(tab => {
+            if (!tab.data) tab.data = [];
+            const validData = tab.data.filter(item =>
+                item && item.machineData && typeof item.machineData === 'string' &&
+                monthOrder.includes(item.period) &&
+                ['Done', 'Outstanding'].includes(item.status)
+            );
+            if (validData.length !== tab.data.length) {
+                console.warn(`Menghapus ${tab.data.length - validData.length} data tidak valid di tab ${tab.name}`);
+            }
+            tab.data = validData;
+        });
+    }
+}
+
+// Inisialisasi aplikasi saat DOM dimuat
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('script.js dimuat');
+    initializeData();
+});
