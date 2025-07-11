@@ -373,6 +373,7 @@ function importData(event) {
       } catch (err) {
         alert("Gagal mengimpor JSON: " + err.message);
       }
+        document.getElementById('importFile').value = ''; // ✅ reset agar siap pilih file lagi
     };
     reader.readAsText(file);
   }
@@ -415,6 +416,13 @@ function importData(event) {
     alert("Format file tidak didukung. Gunakan .json atau .xlsx");
   }
 }
+
+function resetAndOpenImport() {
+  const fileInput = document.getElementById('importFile');
+  fileInput.value = '';  // ✅ reset agar onchange aktif meski file sama
+  fileInput.click();     // ✅ buka dialog file langsung
+}
+
 // Modal system functions
 function showConfirmModal(message, action, options = {}) {
     const {
