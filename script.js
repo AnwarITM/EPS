@@ -365,7 +365,7 @@ function importData(event) {
         if (!Array.isArray(importedTabs)) throw new Error("Invalid JSON structure");
         tabs = importedTabs;
         currentTab = 0;
-        saveTabs();
+        saveToLocalStorage();
         renderTabs();
         renderTable();
         updateStats();
@@ -399,7 +399,7 @@ function importData(event) {
         }));
 
         tabs[currentTab].data.push(...formatted);
-        saveTabs();
+        saveToLocalStorage();
         renderTable();
         updateStats();
         alert("Data berhasil diimpor dari Excel ke tab aktif.");
