@@ -88,26 +88,6 @@
                 Sort by Period
             </button>
 
-            <button id="exportBtn" onclick="exportData()" title="Export Data to JSON">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
-                Export
-            </button>
-
-            <button id="importBtn" onclick="resetAndOpenImport()" title="Import Data (Excel/JSON)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor"
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                Import
-            </button>
-
             <button onclick="deleteAll()" title="Delete All Data">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
@@ -118,7 +98,9 @@
                 </svg>
                 Delete All
             </button>
+
             
+
             <button id="removeTabBtn" onclick="removeTab()" title="Remove Current Tab">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
@@ -129,7 +111,28 @@
                 Remove Tab
             </button>
 
-            <input type="file" id="importFile" style="display: none;" accept=".json,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange="importData(event)">
+            <button id="exportBtn" onclick="exportData()" title="Export Data to JSON">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Export
+            </button>
+
+            <button id="importBtn" onclick="document.getElementById('importFile').click()" title="Import Data from JSON">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Import
+            </button>
+
+            <input type="file" id="importFile" style="display: none;" accept=".json" onchange="importData(event)">
+        </div>
 
         <div class="table-container">
             <table id="dataTable">
@@ -194,10 +197,8 @@
             </div>
         </div>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="script.js"></script>
-</body>
-    
+
+    <script src="script.js"></script>
     <script>
         // Register service worker
         if ('serviceWorker' in navigator) {
@@ -249,5 +250,5 @@
             dismissInstallBanner();
         });
     </script>
-    
+</body>
 </html>
