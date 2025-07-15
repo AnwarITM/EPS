@@ -334,93 +334,56 @@ function sortByPeriod() {
 }
 
 // Import/Export functions
-
 function exportData() {
-  const activeTab = tabs[currentTab];
-  const exportRows = activeTab.data.map((item, index) => ({
-    No: index + 1,
-    "Data Mesin": item.machineData || '',
-    Plan: item.period || '',
-    Notes: item.notes || '',
-    Status: item.status || ''
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(exportRows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, activeTab.name || "Sheet1");
-
-  XLSX.writeFile(workbook, (activeTab.name || "data") + ".xlsx");
+    const data = tabs[currentTab].data;
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `data-tab-${currentTab + 1}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 function importData(event) {
-  const file = event.target.files[0];
-  const reader = new FileReader();
-  const fileName = file.name.toLowerCase();
+    const file = event.target.files[0];
+    if (!file) return;
 
-  if (fileName.endsWith('.json')) {
-    // Import dari JSON
-    reader.onload = function (e) {
-      try {
-        const importedTabs = JSON.parse(e.target.result);
-        if (!Array.isArray(importedTabs)) throw new Error("Invalid JSON structure");
-        tabs = importedTabs;
-        currentTab = 0;
-        saveToLocalStorage();
-        renderTabs();
-        renderTable();
-        updateStats();
-        alert("Data berhasil diimpor dari JSON.");
-      } catch (err) {
-        alert("Gagal mengimpor JSON: " + err.message);
-      }
-        document.getElementById('importFile').value = ''; // ✅ reset agar siap pilih file lagi
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            if (Array.isArray(importedData) && importedData.every(item =>
+                item.machineData && typeof item.machineData === 'string' &&
+                monthOrder.includes(item.period) &&
+                ['Done', 'Outstanding'].includes(item.status)
+            )) {
+                showConfirmModal(
+                    'Import will replace current tab data. Continue?',
+                    () => {
+                        tabs[currentTab].data = importedData;
+                        saveToLocalStorage();
+                        renderTable();
+                        updateStats();
+                        document.getElementById('importFile').value = '';
+                    },
+                    {
+                        btnText: 'Import',
+                        title: 'Import Data'
+                    }
+                );
+            } else {
+                showAlertModal('Invalid JSON format or data structure!');
+            }
+        } catch (error) {
+            console.error('Error reading JSON file:', error);
+            showAlertModal('Error reading JSON file: ' + error.message);
+        }
     };
     reader.readAsText(file);
-  }
-
-  else if (fileName.endsWith('.xlsx')) {
-    // Import dari Excel (arrayBuffer untuk dukungan lebih luas)
-    reader.onload = function (e) {
-      try {
-        const workbook = XLSX.read(e.target.result, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-        if (!jsonData.length || !jsonData[0]['Data Mesin']) {
-          alert("Format Excel tidak sesuai. Pastikan kolom 'Data Mesin', 'Plan', 'Notes', dan 'Status' tersedia.");
-          return;
-        }
-
-        const formatted = jsonData.map(row => ({
-          machineData: row['Data Mesin'] || '',
-          period: row['Plan'] || 'Jan',
-          notes: row['Notes'] || '',
-          status: (row['Status'] || '').toLowerCase() === 'done' ? 'Done' : 'Outstanding'
-        }));
-
-        tabs[currentTab].data.push(...formatted);
-        saveToLocalStorage();
-        renderTable();
-        updateStats();
-        alert("Data berhasil diimpor dari Excel ke tab aktif.");
-      } catch (err) {
-        alert("Gagal mengimpor Excel: " + err.message);
-      }
-    };
-
-    reader.readAsArrayBuffer(file); // ✅ Lebih stabil dari binaryString
-  }
-
-  else {
-    alert("Format file tidak didukung. Gunakan .json atau .xlsx");
-  }
-}
-
-function resetAndOpenImport() {
-  const fileInput = document.getElementById('importFile');
-  fileInput.value = '';  // ✅ reset agar onchange aktif meski file sama
-  fileInput.click();     // ✅ buka dialog file langsung
 }
 
 // Modal system functions
