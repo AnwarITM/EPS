@@ -1,7 +1,7 @@
 :root {
   /* === BASE === */
   --bg-color: #f3f6fa;              /* Latar terang abu kebiruan */
-  --card-bg: rgba(10,10,20,0.5);               /* Panel putih */
+  --card-bg: #f6f6f6f6;               /* Panel putih */
   --border-color: #dbeafe;
 
   /* === PRIMARY BCA === */
@@ -36,7 +36,7 @@
 }
 
 
-/* === BACKGROUND === */
+/* === BACKGROUND === 
 body {
   background-image: url('img.jpg');
   background-size: cover;
