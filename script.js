@@ -2,6 +2,7 @@ let tabs = [{ id: 0, name: 'Tab 1', data: [] }];
 let currentTab = 0;
 let editIndex = -1;
 let pendingAction = null;
+let draggedItem = null;
 
 const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -163,6 +164,14 @@ function renderTable() {
     tabs[currentTab].data.forEach((item, index) => {
         if (!item || !item.machineData || !item.period || !item.status) return;
         const row = document.createElement('tr');
+        row.setAttribute('data-index', index);
+        row.draggable = true;
+        row.addEventListener('dragstart', handleDragStart);
+        row.addEventListener('dragover', handleDragOver);
+        row.addEventListener('dragleave', handleDragLeave);
+        row.addEventListener('drop', handleDrop);
+        row.addEventListener('dragend', handleDragEnd);
+        
         row.innerHTML = `
             <td>${index + 1}</td>
             <td>
@@ -189,6 +198,51 @@ function renderTable() {
             </td>
         `;
         tbody.appendChild(row);
+    });
+}
+
+// Drag and Drop functions
+function handleDragStart(e) {
+    draggedItem = this;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.innerHTML);
+    this.classList.add('dragging');
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    this.classList.add('drag-over');
+}
+
+function handleDragLeave() {
+    this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    
+    if (draggedItem !== this) {
+        const fromIndex = parseInt(draggedItem.getAttribute('data-index'));
+        const toIndex = parseInt(this.getAttribute('data-index'));
+        
+        // Reorder the data array
+        const movedItem = tabs[currentTab].data.splice(fromIndex, 1)[0];
+        tabs[currentTab].data.splice(toIndex, 0, movedItem);
+        
+        // Save and re-render
+        saveToLocalStorage();
+        renderTable();
+        updateStats();
+    }
+}
+
+function handleDragEnd() {
+    this.classList.remove('dragging');
+    document.querySelectorAll('tr').forEach(row => {
+        row.classList.remove('drag-over');
     });
 }
 
