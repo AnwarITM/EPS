@@ -131,6 +131,40 @@
       }
     }
 
+    /* Glass Modal for Maintenance */
+    .glass-modal-overlay {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(5px);
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .glass-modal-content {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 2rem;
+      text-align: center;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+      color: #fff;
+      max-width: 450px;
+      width: 90%;
+      animation: slideUp 0.5s ease;
+    }
+    
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
     /* Modal */
     .modal {
       display: none;
@@ -167,12 +201,43 @@
   <a href="1.html" class="continue-btn">cooming soon</a>
   </div>
 
+  <!-- MAINTENANCE MODAL -->
+  <div id="maintenanceModal" class="glass-modal-overlay">
+    <div class="glass-modal-content">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+      <h2 style="margin-bottom: 1rem; color: #00e5ff; font-weight: 600;">Maintenance Alert</h2>
+      <p style="margin-bottom: 1.5rem; line-height: 1.6; font-size: 1.1rem; color: rgba(255,255,255,0.9);">
+        maintenance soon, please import data kalian untuk mencegah input manual satu-persatu setelah selesai maintenance
+      </p>
+      <button onclick="closeMaintenanceModal()" class="continue-btn" style="width: 100%; margin: 0;">OK, Saya Mengerti</button>
+    </div>
+  </div>
+
   <!-- MODAL -->
   <div id="myModal" class="modal">
     <div class="modal-content">
       <p>Halaman dimuat ulang</p>
     </div>
   </div>
+
+  <!-- MAINTENANCE SCRIPT -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Small delay for smooth entrance
+      setTimeout(() => {
+        document.getElementById('maintenanceModal').style.display = 'flex';
+      }, 500);
+    });
+
+    function closeMaintenanceModal() {
+      const modal = document.getElementById('maintenanceModal');
+      modal.style.transition = 'opacity 0.3s ease';
+      modal.style.opacity = '0';
+      setTimeout(() => {
+        modal.style.display = 'none';
+      }, 300);
+    }
+  </script>
 
   <!-- TAP 5X SCRIPT -->
   <script>
