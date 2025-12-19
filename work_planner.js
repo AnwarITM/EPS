@@ -16,7 +16,8 @@ const createNewTab = (id) => ({
     excelConfig: {
         lastMapWsid: '',
         lastMapPlan: ''
-    }
+    },
+    sortMode: 'date' // 'date' | 'manual'
 });
 
 const app = {
@@ -53,9 +54,10 @@ const app = {
 
         // Migrate old data: ensure each row has id + status
         this.state.tabs.forEach(tab => {
-            tab.data = (tab.data || []).map(row => {
+            tab.data = (tab.data || []).map((row, idx) => {
                 if (!row.id) row.id = 'm_' + Date.now() + Math.random();
                 if (!row.status) row.status = 'outstanding';
+                if (typeof row.sortOrder !== 'number') row.sortOrder = idx;
                 // Backfill legacy field names
                 if (!row.wsid && row.machineData) row.wsid = row.machineData;
                 if (!row.plan && row.period) row.plan = row.period;
@@ -66,6 +68,7 @@ const app = {
                 row.planTs = row.planTs || ts;
                 return row;
             });
+            tab.sortMode = tab.sortMode || 'date';
         });
         this.saveState();
     },
@@ -162,14 +165,18 @@ const app = {
         $('#mOut').textContent = out;
         $('#emptyState').style.display = total === 0 ? 'block' : 'none';
 
+        if (tab.sortMode === 'date') this.sortDataByDate(tab.data);
+
         let filtered = tab.data;
         if (this.state.filter !== 'all') {
             filtered = filtered.filter(row => row.status === this.state.filter);
         }
 
-        this.sortDataByDate(filtered);
+        const displayRows = (tab.sortMode === 'manual')
+            ? [...filtered].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+            : filtered;
 
-        filtered.forEach((row, index) => {
+        displayRows.forEach((row, index) => {
             const tr = document.createElement('tr');
             tr.className = 'tr-clickable swipe-row';
             tr.dataset.id = row.id;
@@ -213,19 +220,31 @@ const app = {
             // Visual feedback
             setTimeout(() => {
                 tr.style.opacity = '0.3';
-                tr.classList.add('dragging');
+                tr.classList.add('dragging-source');
             }, 0);
         });
 
         handle.addEventListener('dragend', () => {
             tr.style.opacity = '1';
-            tr.classList.remove('dragging');
+            tr.classList.remove('dragging-source');
+            $$('tr.drop-target').forEach(r => r.classList.remove('drop-target'));
             this.state.dragItem = null;
         });
 
         tr.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
+        });
+
+        tr.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            if (this.state.dragItem && this.state.dragItem.id !== row.id) {
+                tr.classList.add('drop-target');
+            }
+        });
+
+        tr.addEventListener('dragleave', () => {
+            tr.classList.remove('drop-target');
         });
 
         tr.addEventListener('drop', (e) => {
@@ -235,6 +254,7 @@ const app = {
             if (sourceId && sourceId !== row.id) {
                 this.reorderItems(sourceId, row.id);
             }
+            $$('tr.drop-target').forEach(r => r.classList.remove('drop-target'));
         });
     },
 
@@ -313,7 +333,8 @@ const app = {
         const cleanup = () => {
             this.state.touchDragging = false;
             pointerTargetId = null;
-            tr.classList.remove('dragging');
+            tr.classList.remove('dragging-source');
+            $$('tr.drop-target').forEach(r => r.classList.remove('drop-target'));
         };
 
         handle.addEventListener('pointerdown', (e) => {
@@ -321,7 +342,7 @@ const app = {
             e.preventDefault();
 
             this.state.touchDragging = true;
-            tr.classList.add('dragging');
+            tr.classList.add('dragging-source');
             tr.style.transition = 'none';
             tr.style.transform = 'translateX(0)';
 
@@ -331,14 +352,14 @@ const app = {
                 const targetRow = target ? target.closest('tr.swipe-row') : null;
                 pointerTargetId = targetRow ? targetRow.dataset.id : null;
                 // Highlight potential drop target
-                $$('tr.swipe-row').forEach(r => r.classList.toggle('dragging', r.dataset.id === pointerTargetId));
+                $$('tr.swipe-row').forEach(r => r.classList.toggle('drop-target', r.dataset.id === pointerTargetId));
             };
 
             const upHandler = () => {
                 if (pointerTargetId && pointerTargetId !== row.id) {
                     this.reorderItems(row.id, pointerTargetId);
                 }
-                $$('tr.swipe-row').forEach(r => r.classList.remove('dragging'));
+                $$('tr.swipe-row').forEach(r => r.classList.remove('drop-target'));
                 handle.releasePointerCapture(e.pointerId);
                 document.removeEventListener('pointermove', moveHandler);
                 document.removeEventListener('pointerup', upHandler);
@@ -422,7 +443,8 @@ const app = {
                 plan: parsedPlan.label,
                 planTs: parsedPlan.ts,
                 status: 'outstanding',
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                sortOrder: tab.data.length
             });
         }
 
@@ -479,6 +501,8 @@ const app = {
         if (srcIdx >= 0 && tgtIdx >= 0) {
             const item = tab.data.splice(srcIdx, 1)[0];
             tab.data.splice(tgtIdx, 0, item);
+            tab.data.forEach((r, idx) => r.sortOrder = idx);
+            tab.sortMode = 'manual';
             this.saveState();
             this.renderTableData();
         }
@@ -647,7 +671,8 @@ const app = {
                     if (!confirm(`Import ${list.length} items? This will APPEND to current list.`)) return;
                 }
 
-                const newData = list.map(item => {
+                const baseOrder = tab.data.length;
+                const newData = list.map((item, idx) => {
                     const parsedPlan = this.parsePlanValue(item.plan || item.period || '');
                     const wsidVal = item.machineData || item.wsid || '';
                     return {
@@ -658,7 +683,8 @@ const app = {
                         plan: parsedPlan.label,
                         planTs: parsedPlan.ts,
                         status: (item.status && item.status.toLowerCase() === 'done') ? 'done' : 'outstanding',
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        sortOrder: baseOrder + idx
                     };
                 });
 

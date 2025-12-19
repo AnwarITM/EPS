@@ -616,9 +616,42 @@
             box-shadow: 0 0 0 3px var(--accent-color);
         }
 
-        .dragging {
+        .dragging-source {
             border: 2px dashed var(--primary-color) !important;
-            background: rgba(99, 102, 241, 0.1) !important;
+            background: rgba(99, 102, 241, 0.12) !important;
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.25);
+            transform: scale(1.01);
+            animation: dragPulse 0.9s ease-in-out infinite alternate;
+        }
+
+        .drop-target {
+            position: relative;
+            border: 2px solid rgba(79, 70, 229, 0.25);
+        }
+
+        .drop-target::after {
+            content: 'Lepas di sini';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            pointer-events: none;
+        }
+
+        @keyframes dragPulse {
+            from {
+                box-shadow: 0 6px 14px rgba(79, 70, 229, 0.18);
+            }
+
+            to {
+                box-shadow: 0 14px 32px rgba(79, 70, 229, 0.28);
+            }
         }
 
         .modal-footer {
