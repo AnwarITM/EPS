@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Catatan Troubleshoot ATM</title>
+  <link rel="stylesheet" href="design-tokens.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="seasonal-effects.css">
+  <script src="seasonal-effects.js" defer></script>
+  <style>
+    body {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #e0f2fe 0%, #ede9fe 100%);
+      min-height: 100vh;
+      color: #1e293b;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 12px 48px rgba(99, 102, 241, 0.12);
+      transform: translateY(-2px);
+    }
+
+    h2 {
+      color: #4f46e5;
+      margin-bottom: 20px;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 12px;
+      font-size: 15px;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #1e293b;
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #94a3b8;
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: rgba(99, 102, 241, 0.5);
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(139, 92, 246, 0.9));
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 1), rgba(124, 58, 237, 1));
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .note-item {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      transition: all 0.3s ease;
+    }
+
+    .note-item:hover {
+      box-shadow: 0 8px 32px rgba(99, 102, 241, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .note-item h3 {
+      color: #4f46e5;
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+
+    .note-item .kategori {
+      background: rgba(99, 102, 241, 0.1);
+      color: #4f46e5;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .note-item .isi {
+      color: #334155;
+      line-height: 1.6;
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+    }
+
+    .note-item button {
+      width: auto;
+      padding: 8px 16px;
+      font-size: 14px;
+      margin-right: 8px;
+      margin-top: 8px;
+    }
+
+    #notif {
+      text-align: center;
+      margin-top: 12px;
+      font-weight: 500;
+    }
+
+    /* Mobile responsive styles */
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+
+      .card {
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 12px;
+      }
+
+      h2 {
+        font-size: 20px;
+        margin-bottom: 16px;
+      }
+
+      input,
+      textarea {
+        padding: 12px 14px;
+        font-size: 14px;
+        margin-bottom: 14px;
+      }
+
+      button {
+        padding: 12px;
+        font-size: 15px;
+      }
+
+      .note-item {
+        padding: 16px;
+        margin-bottom: 14px;
+      }
+
+      .note-item h3 {
+        font-size: 16px;
+      }
+
+      .note-item button {
+        padding: 6px 12px;
+        font-size: 13px;
+        margin-right: 6px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 8px;
+      }
+
+      .card {
+        padding: 16px;
+        border-radius: 10px;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      input,
+      textarea {
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+
+      button {
+        padding: 10px;
+        font-size: 14px;
+      }
+
+      .note-item {
+        padding: 14px;
+      }
+
+      .note-item h3 {
+        font-size: 15px;
+      }
+
+      .note-item .kategori {
+        font-size: 11px;
+        padding: 3px 10px;
+      }
+
+      .note-item button {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card seasonal-snow-target" id="loginForm">
+    <h2 data-seasonal-title>Login Admin</h2>
+    <input type="password" id="adminPassword" placeholder="Masukkan password admin">
+    <button onclick="login()">Login</button>
+  </div>
+
+  <div class="card seasonal-snow-target" id="formInput" style="display:none">
+    <h2 id="formTitle" data-seasonal-title>Input Catatan Baru</h2>
+    <input type="text" id="judul" placeholder="Judul catatan">
+    <input type="text" id="kategori" placeholder="Kategori (misal: NCR, PSU, EPP)">
+    <textarea id="isi" placeholder="Isi catatan troubleshooting..." rows="6"></textarea>
+    <button onclick="simpanCatatan()">Simpan Catatan</button>
+    <p id="notif" style="color: green;"></p>
+  </div>
+
+  <div id="daftarCatatan" style="margin-top: 30px;"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // Konfigurasi Firebase kamu
+    const firebaseConfig = {
+      apiKey: "AIzaSyAqqwSS1KTnAjfGcqvV_-TRHMYXJlTjtlI",
+      authDomain: "catatan-troubleshoot-atm-2b5a4.firebaseapp.com",
+      databaseURL: "https://catatan-troubleshoot-atm-2b5a4-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "catatan-troubleshoot-atm-2b5a4",
+      storageBucket: "catatan-troubleshoot-atm-2b5a4.firebasestorage.app",
+      messagingSenderId: "441198643571",
+      appId: "1:441198643571:web:7ee3c056d933acb3515d06"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let editingKey = null; // untuk deteksi mode edit
+
+    const passwordBenar = "admin123";
+
+    function login() {
+      const input = document.getElementById("adminPassword").value;
+      if (input === passwordBenar) {
+        document.getElementById("loginForm").style.display = "none";
+        document.getElementById("formInput").style.display = "block";
+        loadCatatan();
+      } else {
+        alert("Password salah!");
+      }
+    }
+
+    function simpanCatatan() {
+      const judul = document.getElementById("judul").value.trim();
+      const kategori = document.getElementById("kategori").value.trim();
+      const isi = document.getElementById("isi").value.trim();
+
+      if (!judul || !kategori || !isi) {
+        alert("Semua kolom harus diisi!");
+        return;
+      }
+
+      const data = { judul, kategori, isi };
+
+      if (editingKey) {
+        // Simpan edit
+        db.ref("catatan/" + editingKey).set(data, (error) => {
+          if (error) {
+            alert("Gagal mengedit catatan.");
+          } else {
+            resetForm();
+            document.getElementById("notif").innerText = "Catatan berhasil diperbarui.";
+            loadCatatan();
+          }
+        });
+      } else {
+        // Simpan baru
+        const newRef = db.ref("catatan").push();
+        newRef.set(data, (error) => {
+          if (error) {
+            alert("Gagal menyimpan data.");
+          } else {
+            resetForm();
+            document.getElementById("notif").innerText = "Catatan berhasil disimpan.";
+            loadCatatan();
+          }
+        });
+      }
+    }
+
+    function resetForm() {
+      editingKey = null;
+      document.getElementById("judul").value = "";
+      document.getElementById("kategori").value = "";
+      document.getElementById("isi").value = "";
+      document.getElementById("formTitle").innerText = "Input Catatan Baru";
+      document.getElementById("notif").innerText = "";
+    }
+
+    function loadCatatan() {
+      db.ref("catatan").once("value", (snapshot) => {
+        const data = snapshot.val();
+        const wrapper = document.getElementById("daftarCatatan");
+        wrapper.innerHTML = "";
+
+        if (!data) {
+          wrapper.innerHTML = "<p style='text-align:center;'>Belum ada catatan.</p>";
+          return;
+        }
+
+        for (const key in data) {
+          const item = data[key];
+          const div = document.createElement("div");
+          div.className = "catatan";
+          div.innerHTML = `
+            <div class="judul">${item.judul}</div>
+            <div class="kategori">${item.kategori}</div>
+            <div class="isi">${item.isi}</div>
+            <button class="edit-btn" onclick="editCatatan('${key}')">Edit</button>
+            <button class="hapus-btn" onclick="hapusCatatan('${key}')">Hapus</button>
+          `;
+          wrapper.appendChild(div);
+        }
+      });
+    }
+
+    function editCatatan(key) {
+      db.ref("catatan/" + key).once("value", (snapshot) => {
+        const item = snapshot.val();
+        if (item) {
+          document.getElementById("judul").value = item.judul;
+          document.getElementById("kategori").value = item.kategori;
+          document.getElementById("isi").value = item.isi;
+          editingKey = key;
+          document.getElementById("formTitle").innerText = "Edit Catatan";
+          window.scrollTo(0, 0);
+        }
+      });
+    }
+
+    function hapusCatatan(key) {
+      if (confirm("Yakin ingin menghapus catatan ini?")) {
+        db.ref("catatan/" + key).remove((error) => {
+          if (error) {
+            alert("Gagal menghapus catatan.");
+          } else {
+            loadCatatan();
+          }
+        });
+      }
+    }
+  </script>
+</body>
+
+</html>

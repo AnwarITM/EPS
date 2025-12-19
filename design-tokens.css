@@ -1,0 +1,194 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Font */
+  --font-family: 'Outfit', 'Inter', sans-serif;
+
+  /* Core palette - Ocean Fresh */
+  --primary-color: #06b6d4;
+  /* Cyan-500 */
+  --primary-hover: #0891b2;
+  /* Cyan-600 */
+  --gradient-primary: linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%);
+  /* Cyan to Blue */
+  --accent-color: #f472b6;
+  /* Pink accent for fun */
+
+  /* Backgrounds */
+  --bg-color-light: #f0f9ff;
+  --bg-color-dark: #0f172a;
+  --bg-color: var(--bg-color-light);
+
+  /* Card background (Glass) */
+  --card-bg-light: rgba(255, 255, 255, 0.65);
+  --card-bg-dark: rgba(15, 23, 42, 0.6);
+  --card-bg: var(--card-bg-light);
+
+  /* Text colors */
+  --text-color-light: #1e293b;
+  /* Slate-800 */
+  --text-color-dark: #f1f5f9;
+  --text-color: var(--text-color-light);
+  --text-secondary: #64748b;
+  /* Slate-500 */
+  --header-text-color: #0f172a;
+
+  /* Misc colors */
+  --secondary-color: rgba(255, 255, 255, 0.5);
+  --danger-color: #ef4444;
+  --success-color: #22c55e;
+
+  /* Borders & shadows */
+  --border-radius: 16px;
+  --border-color: rgba(255, 255, 255, 0.6);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.4);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+}
+
+body {
+  font-family: var(--font-family);
+}
+
+/* Welcome page with glassmorphism */
+/* Welcome page with glassmorphism */
+.welcome-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 24px;
+  padding: 20px;
+  background: transparent !important;
+  /* Ensure body bg shows */
+}
+
+.welcome-container h1 {
+  font-size: clamp(36px, 5vw, 52px);
+  font-weight: 700;
+  color: #4f46e5;
+  margin: 0;
+  text-align: center;
+  text-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.welcome-container h1 a {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.welcome-container h1 a:hover {
+  transform: scale(1.05);
+  text-shadow: 0 6px 16px rgba(79, 70, 229, 0.25);
+}
+
+.continue-btn {
+  padding: 18px 40px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #4f46e5;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  min-width: 240px;
+  text-align: center;
+}
+
+.continue-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 48px rgba(99, 102, 241, 0.15);
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.continue-btn:active {
+  transform: translateY(-2px);
+}
+
+/* Modal with glassmorphism */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 40px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .welcome-container {
+    padding: 16px;
+    gap: 20px;
+  }
+
+  .welcome-container h1 {
+    font-size: clamp(28px, 6vw, 36px);
+  }
+
+  .continue-btn {
+    padding: 14px 32px;
+    font-size: 16px;
+    min-width: 200px;
+  }
+
+  .modal-content {
+    padding: 30px;
+    font-size: 18px;
+    margin: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-container {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .welcome-container h1 {
+    font-size: clamp(24px, 7vw, 32px);
+  }
+
+  .continue-btn {
+    padding: 12px 24px;
+    font-size: 15px;
+    min-width: 180px;
+  }
+
+  .modal-content {
+    padding: 24px;
+    font-size: 16px;
+    margin: 16px;
+    border-radius: 16px;
+  }
+}

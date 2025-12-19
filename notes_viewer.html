@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catatan Troubleshoot ATM</title>
+  <link rel="stylesheet" href="design-tokens.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="seasonal-effects.css">
+  <link id="theme-link" rel="stylesheet" href="theme-light.css">
+  <script src="theme_manager.js"></script>
+  <script src="seasonal-effects.js" defer></script>
+  <style>
+    body {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      /* Background handled by styles.css */
+      min-height: 100vh;
+      color: var(--text-color);
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--primary-color);
+      margin-bottom: 32px;
+      font-size: 32px;
+      font-weight: 700;
+      text-shadow: 0 2px 8px rgba(6, 182, 212, 0.1);
+    }
+
+    #search {
+      width: 100%;
+      padding: 14px 20px;
+      margin-bottom: 32px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 16px;
+      font-size: 16px;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #1e293b;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s ease;
+    }
+
+    #search::placeholder {
+      color: #94a3b8;
+    }
+
+    #search:focus {
+      outline: none;
+      border-color: rgba(6, 182, 212, 0.5);
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 8px 32px rgba(6, 182, 212, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .catatan {
+      margin-bottom: 20px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .catatan:hover {
+      box-shadow: 0 12px 48px rgba(6, 182, 212, 0.12);
+      transform: translateY(-4px);
+      border-color: rgba(6, 182, 212, 0.3);
+    }
+
+    /* Caption dengan glassmorphism */
+    .judul {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(59, 130, 246, 0.12));
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: var(--primary-hover);
+      padding: 18px 24px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 17px;
+      transition: all 0.3s ease;
+      position: relative;
+      user-select: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .judul:hover {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.18), rgba(59, 130, 246, 0.18));
+      padding-left: 28px;
+      color: var(--primary-color);
+    }
+
+    .judul::after {
+      content: '▼';
+      position: absolute;
+      right: 24px;
+      transition: transform 0.3s ease;
+      font-size: 12px;
+      opacity: 0.6;
+    }
+
+    .judul:hover::after {
+      transform: translateY(2px);
+      opacity: 1;
+    }
+
+    /* Box isi dengan glassmorphism + Smooth Transition */
+    .detail {
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-top: none;
+
+      /* Smooth expanding animation using max-height */
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .detail.open {
+      max-height: 2000px;
+      /* Cukup besar untuk konten panjang */
+      opacity: 1;
+      padding-bottom: 24px;
+      /* Space bawah saat buka */
+    }
+
+    .kategori {
+      background: rgba(6, 182, 212, 0.08);
+      color: var(--primary-color);
+      padding: 10px 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .isi {
+      padding: 24px;
+      line-height: 1.8;
+      font-size: 15px;
+      color: #334155;
+      background: rgba(255, 255, 255, 0.3);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    #dataContainer:empty::after {
+      content: 'Tidak ada catatan ditemukan';
+      display: block;
+      text-align: center;
+      padding: 60px 20px;
+      color: #94a3b8;
+      font-style: italic;
+      font-size: 16px;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 16px;
+      margin-top: 20px;
+    }
+
+    /* Smooth scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.3);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.5);
+    }
+
+    /* Mobile responsive styles */
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+
+      h1 {
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+
+      #search {
+        padding: 12px 16px;
+        font-size: 14px;
+        margin-bottom: 20px;
+      }
+
+      .catatan {
+        margin-bottom: 16px;
+        border-radius: 12px;
+      }
+
+      .judul {
+        padding: 14px 16px;
+        font-size: 15px;
+      }
+
+      .judul:hover {
+        padding-left: 20px;
+      }
+
+      .judul::after {
+        right: 16px;
+      }
+
+      .kategori {
+        padding: 8px 16px;
+        font-size: 11px;
+      }
+
+      .isi {
+        padding: 16px;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 8px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin-bottom: 16px;
+      }
+
+      #search {
+        padding: 10px 14px;
+        font-size: 13px;
+        margin-bottom: 16px;
+      }
+
+      .judul {
+        padding: 12px 14px;
+        font-size: 14px;
+      }
+
+      .kategori {
+        padding: 6px 14px;
+        font-size: 10px;
+      }
+
+      .isi {
+        padding: 14px;
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1 class="seasonal-snow-target" data-seasonal-title>Catatan Troubleshoot ATM</h1>
+  <input type="text" id="search" placeholder="Cari catatan... (judul, kategori, isi)" oninput="cariCatatan()">
+  <div id="dataContainer" class="seasonal-snow-target"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAqqwSS1KTnAjfGcqvV_-TRHMYXJlTjtlI",
+      authDomain: "catatan-troubleshoot-atm-2b5a4.firebaseapp.com",
+      databaseURL: "https://catatan-troubleshoot-atm-2b5a4-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "catatan-troubleshoot-atm-2b5a4",
+      storageBucket: "catatan-troubleshoot-atm-2b5a4.firebasestorage.app",
+      messagingSenderId: "441198643571",
+      appId: "1:441198643571:web:7ee3c056d933acb3515d06"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let semuaData = {}; // disimpan sementara untuk pencarian
+
+    function tampilkanCatatan(data) {
+      const container = document.getElementById("dataContainer");
+      container.innerHTML = "";
+
+      for (const id in data) {
+        const item = data[id];
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "catatan";
+
+        const judul = document.createElement("div");
+        judul.className = "judul";
+        judul.textContent = item.judul;
+
+        const detail = document.createElement("div");
+        detail.className = "detail";
+        detail.innerHTML = `
+          <div class="kategori">${item.kategori}</div>
+          <div class="isi">${item.isi}</div>
+        `;
+
+        judul.onclick = () => {
+          // Toggle class 'open' instead of inline display style
+          detail.classList.toggle("open");
+        };
+
+        wrapper.appendChild(judul);
+        wrapper.appendChild(detail);
+        container.appendChild(wrapper);
+      }
+    }
+
+    function loadCatatan() {
+      db.ref("catatan").once("value", (snapshot) => {
+        const data = snapshot.val() || {};
+        semuaData = data;
+        tampilkanCatatan(data);
+      });
+    }
+
+    function cariCatatan() {
+      const q = document.getElementById("search").value.toLowerCase();
+      const hasil = {};
+
+      for (const id in semuaData) {
+        const item = semuaData[id];
+        const gabung = `${item.judul} ${item.kategori} ${item.isi}`.toLowerCase();
+        if (gabung.includes(q)) {
+          hasil[id] = item;
+        }
+      }
+
+      tampilkanCatatan(hasil);
+    }
+
+    window.onload = loadCatatan;
+  </script>
+</body>
+
+</html>
