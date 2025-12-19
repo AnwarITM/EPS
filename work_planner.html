@@ -305,6 +305,17 @@
             vertical-align: middle;
         }
 
+        thead th:nth-child(1),
+        tbody td:nth-child(1) {
+            width: var(--w-handle);
+            min-width: var(--w-handle);
+        }
+
+        thead th:nth-child(4),
+        tbody td:nth-child(4) {
+            min-width: var(--w-plan);
+        }
+
         th {
             background: rgba(99, 102, 241, 0.08);
             /* Fallback */
@@ -753,6 +764,8 @@
         .plan-text {
             font-weight: 600;
             color: var(--text-muted);
+            white-space: nowrap;
+            word-break: keep-all;
         }
 
         @keyframes fadeIn {
@@ -820,6 +833,20 @@
             td {
                 padding: 8px 4px;
                 font-size: 12px;
+            }
+
+            :root {
+                --w-handle: 26px;
+                --w-plan: 140px;
+            }
+
+            thead th:nth-child(4),
+            tbody td:nth-child(4) {
+                min-width: var(--w-plan);
+            }
+
+            .plan-text {
+                font-size: 14px;
             }
 
             /* Import/Export buttons in header smaller? */
