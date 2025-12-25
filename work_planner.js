@@ -326,40 +326,106 @@ const app = {
 
     attachTouchReorder(tr, handle, row) {
         if (!handle) return;
-        handle.style.touchAction = 'none';
-
+        
         let pointerTargetId = null;
+        let startY = 0;
+        let initialTop = 0;
+        let dragClone = null;
 
         const cleanup = () => {
             this.state.touchDragging = false;
             pointerTargetId = null;
             tr.classList.remove('dragging-source');
+            tr.style.opacity = '1';
             $$('tr.drop-target').forEach(r => r.classList.remove('drop-target'));
+            
+            // Remove clone if exists
+            if (dragClone && dragClone.parentNode) {
+                dragClone.parentNode.removeChild(dragClone);
+            }
+            dragClone = null;
         };
 
-        handle.addEventListener('pointerdown', (e) => {
-            if (e.pointerType !== 'touch') return; // keep native drag for mouse/trackpad
+        // Use touchstart/touchmove/touchend for better mobile support
+        handle.addEventListener('touchstart', (e) => {
             e.preventDefault();
-
+            e.stopPropagation();
+            
+            const touch = e.touches[0];
+            startY = touch.clientY;
+            initialTop = tr.getBoundingClientRect().top;
+            
             this.state.touchDragging = true;
             tr.classList.add('dragging-source');
-            tr.style.transition = 'none';
-            tr.style.transform = 'translateX(0)';
+            tr.style.opacity = '0.5';
+            
+            // Vibrate for haptic feedback (if supported)
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }, { passive: false });
+
+        handle.addEventListener('touchmove', (e) => {
+            if (!this.state.touchDragging) return;
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const touch = e.touches[0];
+            
+            // Find target row under finger
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetRow = target ? target.closest('tr.swipe-row') : null;
+            pointerTargetId = targetRow ? targetRow.dataset.id : null;
+            
+            // Highlight potential drop target
+            $$('tr.swipe-row').forEach(r => {
+                const isTarget = r.dataset.id === pointerTargetId && r.dataset.id !== row.id;
+                r.classList.toggle('drop-target', isTarget);
+            });
+        }, { passive: false });
+
+        handle.addEventListener('touchend', (e) => {
+            if (!this.state.touchDragging) return;
+            e.preventDefault();
+            
+            // Vibrate for haptic feedback (if supported)
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+            
+            if (pointerTargetId && pointerTargetId !== row.id) {
+                this.reorderItems(row.id, pointerTargetId);
+            }
+            
+            cleanup();
+        }, { passive: false });
+
+        handle.addEventListener('touchcancel', () => {
+            cleanup();
+        });
+
+        // Also keep pointer events for stylus/mouse on touch devices
+        handle.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'touch') return; // Let touchstart handle touch
+            if (e.pointerType === 'mouse') return; // Let native drag handle mouse
+            
+            // Handle stylus
+            e.preventDefault();
+            this.state.touchDragging = true;
+            tr.classList.add('dragging-source');
 
             const moveHandler = (ev) => {
                 ev.preventDefault();
                 const target = document.elementFromPoint(ev.clientX, ev.clientY);
                 const targetRow = target ? target.closest('tr.swipe-row') : null;
                 pointerTargetId = targetRow ? targetRow.dataset.id : null;
-                // Highlight potential drop target
-                $$('tr.swipe-row').forEach(r => r.classList.toggle('drop-target', r.dataset.id === pointerTargetId));
+                $$('tr.swipe-row').forEach(r => r.classList.toggle('drop-target', r.dataset.id === pointerTargetId && r.dataset.id !== row.id));
             };
 
             const upHandler = () => {
                 if (pointerTargetId && pointerTargetId !== row.id) {
                     this.reorderItems(row.id, pointerTargetId);
                 }
-                $$('tr.swipe-row').forEach(r => r.classList.remove('drop-target'));
                 handle.releasePointerCapture(e.pointerId);
                 document.removeEventListener('pointermove', moveHandler);
                 document.removeEventListener('pointerup', upHandler);

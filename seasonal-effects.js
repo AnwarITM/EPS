@@ -44,7 +44,7 @@
   }
 
   function applySeasonalTitles() {
-    const baseTitle = document.title.replace(/^[❄🎆]\s+/, '');
+    const baseTitle = document.title.replace(/^[🎆❄]\s+/, '');
     document.title = `${icon} ${baseTitle}`;
 
     document.querySelectorAll('[data-seasonal-title]').forEach((el) => {
@@ -102,8 +102,8 @@
   }
 
   function desiredFlakeCount() {
-    const base = Math.floor((state.w * state.h) / 15000); // Reduced density (was 7000)
-    return Math.max(20, Math.min(80, base)); // Lowered max count (was 160)
+    const base = Math.floor((state.w * state.h) / 15000);
+    return Math.max(20, Math.min(80, base));
   }
 
   function syncFlakes() {
@@ -170,7 +170,6 @@
       ctx: state.ctx
     };
 
-    // Initial flakes
     syncFlakes();
 
     const animateSnow = () => {
@@ -182,7 +181,6 @@
       const layer = state.fullSnowLayer;
       const ctx = state.ctx;
 
-      // Update dimensions if window resized
       layer.w = state.w;
       layer.h = state.h;
       syncFlakes();

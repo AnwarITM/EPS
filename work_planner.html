@@ -462,7 +462,15 @@
             position: relative;
             overflow: hidden;
             background: transparent;
-            touch-action: pan-y;
+            touch-action: auto; /* Allow all touch actions, JS will handle specific behaviors */
+        }
+
+        /* Drag Handle - must allow touch drag */
+        .drag-handle {
+            touch-action: none; /* Disable default touch to allow pointer events */
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: move;
         }
 
         .swipe-content {
