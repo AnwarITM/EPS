@@ -145,6 +145,15 @@ const app = {
         this.renderTableData();
     },
 
+    highlightRow(id) {
+        const rowEl = document.querySelector(`tr.swipe-row[data-id="${id}"]`);
+        if (!rowEl) return;
+        rowEl.classList.remove('row-flash');
+        void rowEl.offsetWidth; // restart animation
+        rowEl.classList.add('row-flash');
+        setTimeout(() => rowEl.classList.remove('row-flash'), 450);
+    },
+
     setFilter(f) {
         this.state.filter = f;
         $$('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
@@ -326,103 +335,97 @@ const app = {
 
     attachTouchReorder(tr, handle, row) {
         if (!handle) return;
-        
+
         let pointerTargetId = null;
-        let startY = 0;
-        let initialTop = 0;
         let dragClone = null;
+        let dragOffsetY = 0;
+        let dragStartTop = 0;
+
+        const clearDropTargets = () => {
+            $$('tr.swipe-row').forEach(r => r.classList.remove('drop-target'));
+        };
 
         const cleanup = () => {
             this.state.touchDragging = false;
             pointerTargetId = null;
             tr.classList.remove('dragging-source');
             tr.style.opacity = '1';
-            $$('tr.drop-target').forEach(r => r.classList.remove('drop-target'));
-            
-            // Remove clone if exists
-            if (dragClone && dragClone.parentNode) {
-                dragClone.parentNode.removeChild(dragClone);
-            }
+            clearDropTargets();
+            if (dragClone && dragClone.parentNode) dragClone.parentNode.removeChild(dragClone);
             dragClone = null;
         };
 
-        // Use touchstart/touchmove/touchend for better mobile support
-        handle.addEventListener('touchstart', (e) => {
+        const findTargetRow = (clientX, clientY) => {
+            const hit = document.elementFromPoint(clientX, clientY);
+            if (hit) {
+                const directRow = hit.closest('tr.swipe-row');
+                if (directRow) return directRow;
+            }
+            // Fallback to nearest row by vertical distance so drops still register
+            let nearest = null;
+            let best = Infinity;
+            $$('tr.swipe-row').forEach(r => {
+                const rect = r.getBoundingClientRect();
+                const dist = Math.abs((rect.top + rect.height / 2) - clientY);
+                if (dist < best) {
+                    best = dist;
+                    nearest = r;
+                }
+            });
+            return nearest;
+        };
+
+        handle.addEventListener('pointerdown', (e) => {
+            // Let desktop/mouse keep the native drag flow
+            if (e.pointerType === 'mouse') return;
+            if (e.button !== 0) return;
+
             e.preventDefault();
-            e.stopPropagation();
-            
-            const touch = e.touches[0];
-            startY = touch.clientY;
-            initialTop = tr.getBoundingClientRect().top;
-            
+            const rect = tr.getBoundingClientRect();
+            dragOffsetY = e.clientY - rect.top;
+            dragStartTop = rect.top;
+
             this.state.touchDragging = true;
             tr.classList.add('dragging-source');
             tr.style.opacity = '0.5';
-            
-            // Vibrate for haptic feedback (if supported)
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
-        }, { passive: false });
 
-        handle.addEventListener('touchmove', (e) => {
-            if (!this.state.touchDragging) return;
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const touch = e.touches[0];
-            
-            // Find target row under finger
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
-            const targetRow = target ? target.closest('tr.swipe-row') : null;
-            pointerTargetId = targetRow ? targetRow.dataset.id : null;
-            
-            // Highlight potential drop target
-            $$('tr.swipe-row').forEach(r => {
-                const isTarget = r.dataset.id === pointerTargetId && r.dataset.id !== row.id;
-                r.classList.toggle('drop-target', isTarget);
+            // Lightweight floating clone so users see the drag position
+            dragClone = tr.cloneNode(true);
+            dragClone.classList.add('dragging-clone');
+            Object.assign(dragClone.style, {
+                position: 'fixed',
+                left: `${rect.left}px`,
+                top: `${rect.top}px`,
+                width: `${rect.width}px`,
+                pointerEvents: 'none',
+                zIndex: '1200',
+                opacity: '0.9',
+                transform: 'translateZ(0)',
+                transition: 'transform 90ms ease'
             });
-        }, { passive: false });
+            document.body.appendChild(dragClone);
 
-        handle.addEventListener('touchend', (e) => {
-            if (!this.state.touchDragging) return;
-            e.preventDefault();
-            
-            // Vibrate for haptic feedback (if supported)
-            if (navigator.vibrate) {
-                navigator.vibrate(30);
-            }
-            
-            if (pointerTargetId && pointerTargetId !== row.id) {
-                this.reorderItems(row.id, pointerTargetId);
-            }
-            
-            cleanup();
-        }, { passive: false });
-
-        handle.addEventListener('touchcancel', () => {
-            cleanup();
-        });
-
-        // Also keep pointer events for stylus/mouse on touch devices
-        handle.addEventListener('pointerdown', (e) => {
-            if (e.pointerType === 'touch') return; // Let touchstart handle touch
-            if (e.pointerType === 'mouse') return; // Let native drag handle mouse
-            
-            // Handle stylus
-            e.preventDefault();
-            this.state.touchDragging = true;
-            tr.classList.add('dragging-source');
+            if (navigator.vibrate) navigator.vibrate(30);
 
             const moveHandler = (ev) => {
+                if (!this.state.touchDragging) return;
                 ev.preventDefault();
-                const target = document.elementFromPoint(ev.clientX, ev.clientY);
-                const targetRow = target ? target.closest('tr.swipe-row') : null;
+                const targetRow = findTargetRow(ev.clientX, ev.clientY);
                 pointerTargetId = targetRow ? targetRow.dataset.id : null;
-                $$('tr.swipe-row').forEach(r => r.classList.toggle('drop-target', r.dataset.id === pointerTargetId && r.dataset.id !== row.id));
+
+                $$('tr.swipe-row').forEach(r => {
+                    const isTarget = targetRow && r.dataset.id === pointerTargetId && r.dataset.id !== row.id;
+                    r.classList.toggle('drop-target', isTarget);
+                });
+
+                if (dragClone) {
+                    const deltaY = ev.clientY - dragOffsetY - dragStartTop;
+                    dragClone.style.transform = `translate3d(0, ${deltaY}px, 0)`;
+                }
             };
 
-            const upHandler = () => {
+            const upHandler = (ev) => {
+                if (ev) ev.preventDefault();
                 if (pointerTargetId && pointerTargetId !== row.id) {
                     this.reorderItems(row.id, pointerTargetId);
                 }
@@ -434,9 +437,9 @@ const app = {
             };
 
             handle.setPointerCapture(e.pointerId);
-            document.addEventListener('pointermove', moveHandler);
-            document.addEventListener('pointerup', upHandler);
-            document.addEventListener('pointercancel', upHandler);
+            document.addEventListener('pointermove', moveHandler, { passive: false });
+            document.addEventListener('pointerup', upHandler, { passive: false });
+            document.addEventListener('pointercancel', upHandler, { passive: false });
         });
     },
 
@@ -571,6 +574,7 @@ const app = {
             tab.sortMode = 'manual';
             this.saveState();
             this.renderTableData();
+            this.highlightRow(targetId);
         }
     },
 
