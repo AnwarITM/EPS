@@ -13,36 +13,77 @@
   <script src="seasonal-effects.js" defer></script>
   <style>
     body {
-      max-width: 900px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 20px;
-      /* Background handled by styles.css */
       min-height: 100vh;
       color: var(--text-color);
     }
 
     h1 {
-      text-align: center;
       color: var(--primary-color);
-      margin-bottom: 32px;
-      font-size: 32px;
-      font-weight: 700;
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
       text-shadow: 0 2px 8px rgba(6, 182, 212, 0.1);
+      letter-spacing: -0.3px;
+    }
+
+    .page-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      background: linear-gradient(120deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.6));
+      padding: 18px 18px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      margin-bottom: 18px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .count-pill {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary-hover);
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.22);
+      padding: 8px 12px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .count-meta {
+      font-size: 12px;
+      color: #475569;
+      margin-top: 6px;
+      font-weight: 600;
     }
 
     #search {
       width: 100%;
-      padding: 14px 20px;
-      margin-bottom: 32px;
+      padding: 12px 16px;
       border: 1px solid rgba(255, 255, 255, 0.5);
-      border-radius: 16px;
-      font-size: 16px;
-      background: rgba(255, 255, 255, 0.7);
+      border-radius: 12px;
+      font-size: 15px;
+      background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      color: #1e293b;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s ease;
+      color: #0f172a;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      transition: all 0.25s ease;
     }
 
     #search::placeholder {
@@ -51,107 +92,177 @@
 
     #search:focus {
       outline: none;
+      border-color: rgba(6, 182, 212, 0.4);
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 10px 24px rgba(6, 182, 212, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 8px 2px 4px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .chip-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      background: rgba(255, 255, 255, 0.9);
+      color: #0f172a;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .chip:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(6, 182, 212, 0.12);
+    }
+
+    .chip.active {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.16), rgba(59, 130, 246, 0.2));
       border-color: rgba(6, 182, 212, 0.5);
-      background: rgba(255, 255, 255, 0.85);
-      box-shadow: 0 8px 32px rgba(6, 182, 212, 0.15);
-      transform: translateY(-2px);
+      color: var(--primary-color);
+      box-shadow: 0 6px 18px rgba(59, 130, 246, 0.14);
+    }
+
+    .catatan-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      align-items: start;
+    }
+
+    .tab-context {
+      margin: 6px 0 12px;
+      font-weight: 700;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .catatan {
-      margin-bottom: 20px;
       border-radius: 16px;
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.6);
+      background: rgba(255, 255, 255, 0.7);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.8);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      min-height: 180px;
     }
 
     .catatan:hover {
-      box-shadow: 0 12px 48px rgba(6, 182, 212, 0.12);
-      transform: translateY(-4px);
-      border-color: rgba(6, 182, 212, 0.3);
+      box-shadow: 0 16px 48px rgba(6, 182, 212, 0.14);
+      transform: translateY(-3px);
+      border-color: rgba(6, 182, 212, 0.28);
     }
 
-    /* Caption dengan glassmorphism */
-    .judul {
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(59, 130, 246, 0.12));
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      color: var(--primary-hover);
-      padding: 18px 24px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 17px;
-      transition: all 0.3s ease;
-      position: relative;
-      user-select: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    .card-head {
+      padding: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.65);
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(59, 130, 246, 0.08));
     }
 
-    .judul:hover {
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.18), rgba(59, 130, 246, 0.18));
-      padding-left: 28px;
+    .badge {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(6, 182, 212, 0.12);
       color: var(--primary-color);
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      margin-bottom: 10px;
     }
 
-    .judul::after {
-      content: '▼';
-      position: absolute;
-      right: 24px;
-      transition: transform 0.3s ease;
-      font-size: 12px;
-      opacity: 0.6;
+    .judul {
+      font-weight: 700;
+      font-size: 17px;
+      color: #0f172a;
+      line-height: 1.4;
+      cursor: pointer;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
-    .judul:hover::after {
-      transform: translateY(2px);
-      opacity: 1;
+    .summary {
+      padding: 16px 18px;
+      color: #1f2937;
+      font-size: 14px;
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 76px;
     }
 
-    /* Box isi dengan glassmorphism + Smooth Transition */
     .detail {
-      background: rgba(255, 255, 255, 0.5);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border-top: none;
-
-      /* Smooth expanding animation using max-height */
       max-height: 0;
       overflow: hidden;
       opacity: 0;
-      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.3s ease;
     }
 
     .detail.open {
-      max-height: 2000px;
-      /* Cukup besar untuk konten panjang */
+      max-height: 1200px;
       opacity: 1;
-      padding-bottom: 24px;
-      /* Space bawah saat buka */
-    }
-
-    .kategori {
-      background: rgba(6, 182, 212, 0.08);
-      color: var(--primary-color);
-      padding: 10px 20px;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.5);
     }
 
     .isi {
-      padding: 24px;
-      line-height: 1.8;
-      font-size: 15px;
+      padding: 16px 18px;
+      line-height: 1.7;
+      font-size: 14px;
       color: #334155;
-      background: rgba(255, 255, 255, 0.3);
       white-space: pre-wrap;
       word-wrap: break-word;
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    .card-footer {
+      padding: 14px 18px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .toggle-btn {
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(59, 130, 246, 0.18);
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+
+    .toggle-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(59, 130, 246, 0.22);
+    }
+
+    .toggle-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 8px 18px rgba(59, 130, 246, 0.18);
     }
 
     #dataContainer:empty::after {
@@ -195,43 +306,39 @@
       }
 
       h1 {
-        font-size: 24px;
-        margin-bottom: 20px;
+        font-size: 22px;
       }
 
-      #search {
-        padding: 12px 16px;
-        font-size: 14px;
-        margin-bottom: 20px;
-      }
-
-      .catatan {
-        margin-bottom: 16px;
+      .page-header {
+        padding: 14px;
         border-radius: 12px;
       }
 
-      .judul {
-        padding: 14px 16px;
-        font-size: 15px;
-      }
-
-      .judul:hover {
-        padding-left: 20px;
-      }
-
-      .judul::after {
-        right: 16px;
-      }
-
-      .kategori {
-        padding: 8px 16px;
-        font-size: 11px;
-      }
-
-      .isi {
-        padding: 16px;
+      #search {
+        padding: 12px 14px;
         font-size: 14px;
-        line-height: 1.7;
+      }
+
+      .chip {
+        padding: 7px 11px;
+        font-size: 12px;
+      }
+
+      .group-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .catatan {
+        border-radius: 12px;
+      }
+
+      .card-head {
+        padding: 14px;
+      }
+
+      .summary,
+      .isi {
+        padding: 14px;
       }
     }
 
@@ -242,28 +349,15 @@
 
       h1 {
         font-size: 20px;
-        margin-bottom: 16px;
       }
 
       #search {
-        padding: 10px 14px;
+        padding: 10px 12px;
         font-size: 13px;
-        margin-bottom: 16px;
       }
 
-      .judul {
-        padding: 12px 14px;
-        font-size: 14px;
-      }
-
-      .kategori {
-        padding: 6px 14px;
-        font-size: 10px;
-      }
-
-      .isi {
-        padding: 14px;
-        font-size: 13px;
+      .toggle-btn {
+        width: 100%;
       }
     }
   </style>
@@ -271,9 +365,18 @@
 
 <body>
 
-  <h1 class="seasonal-snow-target" data-seasonal-title>Catatan Troubleshoot ATM</h1>
-  <input type="text" id="search" placeholder="Cari catatan... (judul, kategori, isi)" oninput="cariCatatan()">
-  <div id="dataContainer" class="seasonal-snow-target"></div>
+  <div class="page-header seasonal-snow-target">
+    <div class="header-top">
+      <h1 data-seasonal-title>Catatan Troubleshoot ATM</h1>
+      <div class="count-pill">Total: <span id="totalCount">0</span></div>
+    </div>
+    <input type="text" id="search" placeholder="Cari catatan... (judul, kategori, isi)" oninput="applyFilters()">
+    <div class="chip-row" id="chipRow"></div>
+    <div class="count-meta">Menampilkan <span id="visibleCount">0</span> catatan</div>
+  </div>
+
+  <div class="tab-context">Tab aktif: <span id="activeTabLabel">Semua</span></div>
+  <div id="dataContainer" class="catatan-grid seasonal-snow-target"></div>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -293,64 +396,177 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let semuaData = {}; // disimpan sementara untuk pencarian
+    let semuaData = {};
+    let tabsMap = {};
+    let activeTab = 'all';
 
-    function tampilkanCatatan(data) {
-      const container = document.getElementById("dataContainer");
-      container.innerHTML = "";
+    const searchInput = () => document.getElementById('search');
+    const normalize = (str = '') => String(str || '').trim();
 
-      for (const id in data) {
-        const item = data[id];
+    const makeExcerpt = (text) => {
+      const clean = normalize(text);
+      return clean.length > 180 ? `${clean.slice(0, 180)}…` : clean;
+    };
 
-        const wrapper = document.createElement("div");
-        wrapper.className = "catatan";
+    const resolveTabName = (item = {}) => {
+      return item.tabName ||
+        (item.tabId && tabsMap[item.tabId]?.name) ||
+        item.kategori ||
+        'Tidak ada tab';
+    };
 
-        const judul = document.createElement("div");
-        judul.className = "judul";
-        judul.textContent = item.judul;
-
-        const detail = document.createElement("div");
-        detail.className = "detail";
-        detail.innerHTML = `
-          <div class="kategori">${item.kategori}</div>
-          <div class="isi">${item.isi}</div>
-        `;
-
-        judul.onclick = () => {
-          // Toggle class 'open' instead of inline display style
-          detail.classList.toggle("open");
-        };
-
-        wrapper.appendChild(judul);
-        wrapper.appendChild(detail);
-        container.appendChild(wrapper);
-      }
+    function setCounts(total, visible) {
+      document.getElementById('totalCount').textContent = total;
+      document.getElementById('visibleCount').textContent = visible;
     }
 
-    function loadCatatan() {
-      db.ref("catatan").once("value", (snapshot) => {
-        const data = snapshot.val() || {};
-        semuaData = data;
-        tampilkanCatatan(data);
+    function renderChips(data) {
+      const row = document.getElementById('chipRow');
+      row.innerHTML = '';
+      const counts = new Map();
+
+      Object.values(data || {}).forEach(item => {
+        const tabName = resolveTabName(item);
+        counts.set(tabName, (counts.get(tabName) || 0) + 1);
+      });
+
+      // Include tabs that belum ada catatan
+      Object.values(tabsMap).forEach(t => {
+        if (!counts.has(t.name)) counts.set(t.name, 0);
+      });
+
+      const sorted = Array.from(counts.keys()).sort((a, b) => a.localeCompare(b));
+      const allTabs = ['Semua', ...sorted];
+
+      allTabs.forEach(tab => {
+        const val = tab === 'Semua' ? 'all' : tab;
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = `chip ${activeTab === val ? 'active' : ''}`;
+        chip.textContent = tab === 'Semua' ? 'Semua' : `${tab} (${counts.get(tab) || 0})`;
+        chip.onclick = () => {
+          activeTab = val;
+          document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          applyFilters();
+        };
+        row.appendChild(chip);
       });
     }
 
-    function cariCatatan() {
-      const q = document.getElementById("search").value.toLowerCase();
+    function buildCatatanCard(item) {
+      const card = document.createElement("div");
+      card.className = "catatan";
+
+      const head = document.createElement("div");
+      head.className = "card-head";
+
+      const badge = document.createElement("div");
+      badge.className = "badge";
+      badge.textContent = resolveTabName(item);
+
+      const title = document.createElement("div");
+      title.className = "judul";
+      title.textContent = normalize(item?.judul) || "Tanpa judul";
+
+      head.appendChild(badge);
+      head.appendChild(title);
+
+      const summary = document.createElement("div");
+      summary.className = "summary";
+      summary.textContent = makeExcerpt(item?.isi);
+
+      const detail = document.createElement("div");
+      detail.className = "detail";
+
+      const isi = document.createElement("div");
+      isi.className = "isi";
+      isi.textContent = normalize(item?.isi);
+      detail.appendChild(isi);
+
+      const footer = document.createElement("div");
+      footer.className = "card-footer";
+
+      const btn = document.createElement("button");
+      btn.className = "toggle-btn";
+      btn.textContent = "Buka detail";
+
+      const toggle = () => {
+        const open = detail.classList.toggle("open");
+        btn.textContent = open ? "Tutup" : "Buka detail";
+      };
+
+      btn.onclick = toggle;
+      title.onclick = toggle;
+
+      footer.appendChild(btn);
+
+      card.appendChild(head);
+      card.appendChild(summary);
+      card.appendChild(detail);
+      card.appendChild(footer);
+      return card;
+    }
+
+    function renderList(data) {
+      const container = document.getElementById("dataContainer");
+      container.innerHTML = "";
+
+      const entries = Object.entries(data || {});
+      if (entries.length === 0) return;
+
+      entries
+        .sort((a, b) => {
+          const ja = normalize(a[1]?.judul).toLowerCase();
+          const jb = normalize(b[1]?.judul).toLowerCase();
+          return ja.localeCompare(jb);
+        })
+        .forEach(([, item]) => {
+          container.appendChild(buildCatatanCard(item));
+        });
+    }
+
+    function applyFilters() {
+      const q = normalize(searchInput().value).toLowerCase();
       const hasil = {};
+      let visible = 0;
+      const targetTab = activeTab.toLowerCase();
 
       for (const id in semuaData) {
-        const item = semuaData[id];
-        const gabung = `${item.judul} ${item.kategori} ${item.isi}`.toLowerCase();
-        if (gabung.includes(q)) {
+        const item = semuaData[id] || {};
+        const tabName = resolveTabName(item).toLowerCase();
+        const tabMatch = targetTab === 'all' || tabName === targetTab;
+        const gabung = `${item.judul || ''} ${item.kategori || ''} ${item.isi || ''}`.toLowerCase();
+        const qMatch = gabung.includes(q);
+
+        if (tabMatch && qMatch) {
           hasil[id] = item;
+          visible++;
         }
       }
 
-      tampilkanCatatan(hasil);
+      setCounts(Object.keys(semuaData).length, visible);
+      document.getElementById('activeTabLabel').textContent = activeTab === 'all' ? 'Semua' : activeTab;
+      renderList(hasil);
     }
 
-    window.onload = loadCatatan;
+    function loadAll() {
+      Promise.all([
+        db.ref("tabs").once("value"),
+        db.ref("catatan").once("value")
+      ]).then(([tabsSnap, notesSnap]) => {
+        tabsMap = tabsSnap.val() || {};
+        semuaData = notesSnap.val() || {};
+        renderChips(semuaData);
+        setCounts(Object.keys(semuaData).length, Object.keys(semuaData).length);
+        document.getElementById('activeTabLabel').textContent = 'Semua';
+        renderList(semuaData);
+      });
+    }
+
+    window.onload = () => {
+      loadAll();
+    };
   </script>
 </body>
 
