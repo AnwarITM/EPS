@@ -29,7 +29,6 @@ const app = {
         tabs: [],
         currentTabId: 0,
         filter: 'all',
-        dragItem: null,
         touchDragging: false
     },
 
@@ -49,11 +48,6 @@ const app = {
             (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) ||
             (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
             ('ontouchstart' in window);
-    },
-
-    allowNativeDrag() {
-        // Disable HTML5 drag-and-drop on Android/touch to avoid broken behaviour; keep it for desktop.
-        return !this.platform.isAndroid && !this.platform.prefersTouch;
     },
 
     // --- State Management ---
@@ -204,8 +198,6 @@ const app = {
             ? [...filtered].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
             : filtered;
 
-        const allowNativeDrag = this.allowNativeDrag();
-
         displayRows.forEach((row, index) => {
             const tr = document.createElement('tr');
             tr.className = 'tr-clickable swipe-row';
@@ -215,7 +207,7 @@ const app = {
             const statusLabel = row.status === 'done' ? 'Done' : 'Outstanding';
 
             tr.innerHTML = `
-                <td class="col-order drag-handle" style="cursor: move;" draggable="${allowNativeDrag ? 'true' : 'false'}">${index + 1}</td>
+                <td class="col-order drag-handle" style="cursor: move;" draggable="false">${index + 1}</td>
                 <td onclick="app.openModal('${row.id}')"><div class="text-cell wsid-text">${row.wsid || '-'}</div></td>
                 <td onclick="app.openModal('${row.id}')"><div class="text-cell notes-text text-left">${row.notes || ''}</div></td>
                 <td onclick="app.openModal('${row.id}')"><div class="text-cell plan-text">${row.plan || this.formatPlanTs(row.planTs)}</div></td>
@@ -228,68 +220,9 @@ const app = {
 
             const handle = tr.querySelector('.drag-handle');
 
-            this.attachDragEvents(tr, handle, row, allowNativeDrag);
             this.attachSwipeEvents(tr, row.id);
             this.attachTouchReorder(tr, handle, row);
             tbody.appendChild(tr);
-        });
-    },
-
-    attachDragEvents(tr, handle, row, allowNativeDrag) {
-        if (!handle) return;
-        if (!allowNativeDrag) {
-            handle.setAttribute('draggable', 'false');
-            return;
-        }
-
-        handle.addEventListener('dragstart', (e) => {
-            // Close swipe and ensure row is at 0
-            tr.style.transition = 'none';
-            tr.style.transform = 'translateX(0)';
-
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', row.id);
-            this.state.dragItem = row;
-
-            // Visual feedback
-            setTimeout(() => {
-                tr.style.opacity = '0.3';
-                tr.classList.add('dragging-source');
-            }, 0);
-        });
-
-        handle.addEventListener('dragend', () => {
-            tr.style.opacity = '1';
-            tr.classList.remove('dragging-source');
-            $$('tr.drop-target').forEach(r => r.classList.remove('drop-target'));
-            this.state.dragItem = null;
-        });
-
-        tr.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        });
-
-        tr.addEventListener('dragenter', (e) => {
-            e.preventDefault();
-            if (this.state.dragItem && this.state.dragItem.id !== row.id) {
-                $$('tr.drop-target').forEach(r => r.classList.remove('drop-target'));
-                tr.classList.add('drop-target');
-            }
-        });
-
-        tr.addEventListener('dragleave', () => {
-            tr.classList.remove('drop-target');
-        });
-
-        tr.addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const sourceId = e.dataTransfer.getData('text/plain');
-            if (sourceId && sourceId !== row.id) {
-                this.reorderItems(sourceId, row.id);
-            }
-            $$('tr.drop-target').forEach(r => r.classList.remove('drop-target'));
         });
     },
 
