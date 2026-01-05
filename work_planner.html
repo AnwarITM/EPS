@@ -463,7 +463,10 @@
             overflow: hidden;
             background: transparent;
             touch-action: auto; /* Allow all touch actions, JS will handle specific behaviors */
-            transition: transform 0.18s ease, background 0.18s ease;
+            transition: transform 0.18s cubic-bezier(0.33, 1, 0.68, 1),
+                background 0.18s ease,
+                box-shadow 0.2s ease,
+                opacity 0.16s ease;
         }
 
         /* Drag Handle - must allow touch drag */
@@ -640,7 +643,9 @@
             border: 2px dashed var(--primary-color) !important;
             background: rgba(99, 102, 241, 0.12) !important;
             box-shadow: 0 10px 25px rgba(79, 70, 229, 0.25);
-            transform: scale(1.01);
+            transform: translate3d(0, 0, 0) scale(1.015);
+            opacity: 0.5;
+            filter: saturate(1.05);
             animation: dragPulse 0.9s ease-in-out infinite alternate;
         }
 
@@ -649,14 +654,20 @@
             border-radius: 8px;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
             pointer-events: none;
-            transition: transform 90ms ease, box-shadow 0.2s ease;
+            transition: transform 90ms ease, box-shadow 0.2s ease, opacity 0.18s ease;
+            transform: translateZ(0) scale(1.02);
+            opacity: 0.92;
+            filter: drop-shadow(0 16px 40px rgba(0, 0, 0, 0.24));
+            animation: dragFloat 1.05s ease-in-out infinite alternate;
         }
 
         .drop-target {
             position: relative;
             border: 2px solid rgba(79, 70, 229, 0.25);
-            box-shadow: 0 10px 26px rgba(79, 70, 229, 0.15);
+            box-shadow: 0 10px 26px rgba(79, 70, 229, 0.2);
             animation: dropHint 0.8s ease-in-out infinite alternate;
+            transform: translateY(8px);
+            background: rgba(255, 255, 255, 0.72);
         }
 
         .drop-target::after {
@@ -704,6 +715,18 @@
             to {
                 transform: translate(-50%, -50%) scale(1.02);
                 opacity: 1;
+            }
+        }
+
+        @keyframes dragFloat {
+            from {
+                transform: translateZ(0) scale(1.02) translateY(-2px);
+                opacity: 0.92;
+            }
+
+            to {
+                transform: translateZ(0) scale(1.04) translateY(2px);
+                opacity: 0.98;
             }
         }
 
