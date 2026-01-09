@@ -339,8 +339,8 @@ const app = {
 
         let pointerTargetId = null;
         let dragClone = null;
+        let dragOffsetX = 0;
         let dragOffsetY = 0;
-        let dragStartTop = 0;
 
         const clearDropTargets = () => {
             $$('tr.swipe-row').forEach(r => r.classList.remove('drop-target'));
@@ -389,8 +389,8 @@ const app = {
             this.syncSortButtons();
 
             const rect = tr.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
             dragOffsetY = e.clientY - rect.top;
-            dragStartTop = rect.top;
 
             this.state.touchDragging = true;
             tr.classList.add('dragging-source');
@@ -408,7 +408,7 @@ const app = {
                 zIndex: '1200',
                 opacity: '0.9',
                 transform: 'translateZ(0)',
-                transition: 'transform 90ms ease'
+                transition: 'none'
             });
             document.body.appendChild(dragClone);
 
@@ -426,8 +426,8 @@ const app = {
                 });
 
                 if (dragClone) {
-                    const deltaY = ev.clientY - dragOffsetY - dragStartTop;
-                    dragClone.style.transform = `translate3d(0, ${deltaY}px, 0)`;
+                    dragClone.style.left = `${ev.clientX - dragOffsetX}px`;
+                    dragClone.style.top = `${ev.clientY - dragOffsetY}px`;
                 }
             };
 
