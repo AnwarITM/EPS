@@ -33,7 +33,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.getRegistration().then(reg => reg && reg.update());
+        navigator.serviceWorker.getRegistration().then((reg) => reg && reg.update());
       });
     }
   </script>
@@ -258,9 +258,16 @@
   <!-- PWA Script: Service Worker + Install Prompt -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js')
+      navigator.serviceWorker.register('./sw.js?v=20260109')
         .then((reg) => console.log('Service Worker registered from index.html', reg))
         .catch((err) => console.error('SW registration failed', err));
+
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
     }
 
     let deferredPrompt;

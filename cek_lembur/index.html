@@ -15,7 +15,25 @@
   <link id="theme-link" rel="stylesheet" href="../theme-light.css?v=20250312">
   <script src="../theme_manager.js?v=20250312" defer></script>
   <script src="../seasonal-effects.js?v=20250312" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>`n  <script>`n    if ("serviceWorker" in navigator) {`n      window.addEventListener("load", () => {`n        navigator.serviceWorker.getRegistration().then(reg => reg && reg.update());`n      });`n    }`n  </script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.getRegistration().then((reg) => reg && reg.update());
+      });
+
+      navigator.serviceWorker.register('../sw.js?v=20260109').catch((err) => {
+        console.error("SW registration failed", err);
+      });
+
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+    }
+  </script>
   <style>
 
     * {
