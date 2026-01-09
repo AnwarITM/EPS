@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eps-work-planner-v3';
+const CACHE_NAME = 'eps-work-planner-v4';
 const urlsToCache = [
   './',
   './index.html',
@@ -35,16 +35,29 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
 
-  // Network-first to ensure updates appear without clearing storage
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        const respClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, respClone));
-        return response;
-      })
-      .catch(() => caches.match(request))
-  );
+  const isHTML =
+    request.mode === 'navigate' ||
+    (request.headers.get('accept') || '').includes('text/html');
+
+  // For HTML, force a fresh fetch when online to avoid stale pages
+  const networkFirst = fetch(request, { cache: 'no-store' })
+    .then((response) => {
+      const clone = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+      return response;
+    })
+    .catch(() => caches.match(request));
+
+  // For other assets, keep the network-first approach with cache fallback
+  const generic = fetch(request)
+    .then((response) => {
+      const respClone = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(request, respClone));
+      return response;
+    })
+    .catch(() => caches.match(request));
+
+  event.respondWith(isHTML ? networkFirst : generic);
 });
 
 self.addEventListener('activate', (event) => {

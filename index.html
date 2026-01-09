@@ -27,6 +27,13 @@
   <link id="theme-link" rel="stylesheet" href="theme-light.css">
   <script src="theme_manager.js"></script>
   <script src="seasonal-effects.js" defer></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.getRegistration().then(reg => reg && reg.update());
+      });
+    }
+  </script>
   <style>
     .landing-wrap {
       max-width: 1100px;
