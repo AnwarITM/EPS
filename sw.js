@@ -20,7 +20,6 @@ const urlsToCache = [
   './icon-192x192.png',
   './icon-512x512.png',
   v('./work_planner.js'),
-  v('./work_planner.jsbak.js'),
   v('./theme_manager.js'),
   v('./seasonal-effects.js'),
   './cek_lembur/'
