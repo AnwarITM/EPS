@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v20250312';
+const CACHE_VERSION = 'v20260109';
 const CACHE_NAME = `eps-work-planner-${CACHE_VERSION}`;
 
 const v = (url) => `${url}?${CACHE_VERSION}`;
