@@ -4,9 +4,9 @@
  */
 
 const THEME_KEY = 'eps_theme_pref';
-const THEME_VERSION = 'v20250312';
-const LIGHT_THEME = `theme-light.css?${THEME_VERSION}`;
-const DARK_THEME = `theme-dark.css?${THEME_VERSION}`;
+const THEME_VERSION = '20260110';
+const LIGHT_THEME = `theme-light.css?v=${THEME_VERSION}`;
+const DARK_THEME = `theme-dark.css?v=${THEME_VERSION}`;
 
 // Function to update icon visibility
 function updateThemeIcon(themeFile) {

@@ -9,21 +9,33 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <link rel="stylesheet" href="../design-tokens.css?v=20250312">
-  <link rel="stylesheet" href="../styles.css?v=20250312">
-  <link rel="stylesheet" href="../seasonal-effects.css?v=20250312">
-  <link id="theme-link" rel="stylesheet" href="../theme-light.css?v=20250312">
-  <script src="../theme_manager.js?v=20250312" defer></script>
-  <script src="../seasonal-effects.js?v=20250312" defer></script>
+  <link rel="stylesheet" href="../design-tokens.css?v=20260110">
+  <link rel="stylesheet" href="../styles.css?v=20260110">
+  <link rel="stylesheet" href="../seasonal-effects.css?v=20260110">
+  <link id="theme-link" rel="stylesheet" href="../theme-light.css?v=20260110">
+  <script src="../theme_manager.js?v=20260110" defer></script>
+  <script src="../seasonal-effects.js?v=20260110" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
+    const APP_VERSION = '20260110';
+    const SW_URL = `../sw.js?v=${APP_VERSION}`;
+    const SW_SCRIPT_URL = new URL(SW_URL, location.href).href;
+
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.getRegistration().then((reg) => reg && reg.update());
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((reg) => {
+          if (reg.active && reg.active.scriptURL !== SW_SCRIPT_URL) {
+            reg.unregister();
+          }
+        });
       });
 
-      navigator.serviceWorker.register('../sw.js?v=20260109').catch((err) => {
-        console.error("SW registration failed", err);
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register(SW_URL, { updateViaCache: 'none' }).then((reg) => {
+          reg.update();
+        }).catch((err) => {
+          console.error("SW registration failed", err);
+        });
       });
 
       let refreshing = false;
