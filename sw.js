@@ -45,11 +45,7 @@ self.addEventListener('fetch', (event) => {
 
   // For HTML, force a fresh fetch when online to avoid stale pages
   const networkFirst = fetch(request, { cache: 'no-store' })
-    .then((response) => {
-      const clone = response.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-      return response;
-    })
+    .then((response) => response)
     .catch(() => caches.match(request));
 
   // For other assets, keep the network-first approach with cache fallback
