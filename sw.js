@@ -1,24 +1,28 @@
-const CACHE_NAME = 'eps-work-planner-v4';
+const CACHE_VERSION = 'v20250312';
+const CACHE_NAME = `eps-work-planner-${CACHE_VERSION}`;
+
+const v = (url) => `${url}?${CACHE_VERSION}`;
+
 const urlsToCache = [
   './',
-  './index.html',
-  './work_planner.html',
-  './notes_viewer.html',
-  './cek_lembur/index.html',
-  './styles.css',
-  './design-tokens.css',
-  './seasonal-effects.css',
-  './theme-light.css',
-  './theme-dark.css',
+  v('./index.html'),
+  v('./work_planner.html'),
+  v('./notes_viewer.html'),
+  v('./cek_lembur/index.html'),
+  v('./styles.css'),
+  v('./design-tokens.css'),
+  v('./seasonal-effects.css'),
+  v('./theme-light.css'),
+  v('./theme-dark.css'),
   './manifest.json',
   './icon-16x16.png',
   './icon-32x32.png',
   './icon-192x192.png',
   './icon-512x512.png',
-  './work_planner.js',
-  './work_planner.jsbak.js',
-  './theme_manager.js',
-  './seasonal-effects.js',
+  v('./work_planner.js'),
+  v('./work_planner.jsbak.js'),
+  v('./theme_manager.js'),
+  v('./seasonal-effects.js'),
   './cek_lembur/'
 ];
 
@@ -49,7 +53,7 @@ self.addEventListener('fetch', (event) => {
     .catch(() => caches.match(request));
 
   // For other assets, keep the network-first approach with cache fallback
-  const generic = fetch(request)
+  const generic = fetch(request, { cache: 'no-store' })
     .then((response) => {
       const respClone = response.clone();
       caches.open(CACHE_NAME).then((cache) => cache.put(request, respClone));
