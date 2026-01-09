@@ -173,6 +173,46 @@ const app = {
         this.renderTableData();
     },
 
+    syncSortButtons() {
+        const tab = this.getCurrentTab();
+        const mode = (tab && tab.sortMode) ? tab.sortMode : 'date';
+        $$('[data-sort-mode]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.sortMode === mode);
+        });
+    },
+
+    ensureManualOrder(tab) {
+        (tab?.data || []).forEach((r, idx) => {
+            if (typeof r.sortOrder !== 'number') r.sortOrder = idx;
+        });
+    },
+
+    setSortMode(mode, opts = {}) {
+        const tab = this.getCurrentTab();
+        if (!tab) return;
+        const current = tab.sortMode || 'date';
+        const force = opts.force === true;
+        if (!force && current === mode) {
+            this.syncSortButtons();
+            return;
+        }
+
+        tab.sortMode = mode;
+        if (mode === 'date') {
+            this.sortDataByDate(tab.data);
+            tab.data.forEach((r, idx) => r.sortOrder = idx);
+        } else {
+            this.ensureManualOrder(tab);
+        }
+
+        this.saveState();
+        if (!opts.skipRender) {
+            this.renderTableData();
+        } else {
+            this.syncSortButtons();
+        }
+    },
+
     renderTableData() {
         const tab = this.getCurrentTab();
         const tbody = $('#tableBody');
@@ -181,6 +221,8 @@ const app = {
         const total = tab.data.length;
         const done = tab.data.filter(r => r.status === 'done').length;
         const out = total - done;
+
+        this.syncSortButtons();
 
         $('#mTotal').textContent = total;
         $('#mDone').textContent = done;
@@ -340,6 +382,12 @@ const app = {
             if (e.button !== 0) return;
 
             e.preventDefault();
+            // Force manual mode so the drag result is not overridden by date sorting
+            this.setSortMode('manual', { skipRender: true, force: true });
+            this.ensureManualOrder(this.getCurrentTab());
+            this.saveState();
+            this.syncSortButtons();
+
             const rect = tr.getBoundingClientRect();
             dragOffsetY = e.clientY - rect.top;
             dragStartTop = rect.top;
@@ -530,7 +578,7 @@ const app = {
             const item = tab.data.splice(srcIdx, 1)[0];
             tab.data.splice(tgtIdx, 0, item);
             tab.data.forEach((r, idx) => r.sortOrder = idx);
-            tab.sortMode = 'manual';
+            this.setSortMode('manual', { skipRender: true, force: true });
             this.saveState();
             this.renderTableData();
             this.highlightRow(targetId);

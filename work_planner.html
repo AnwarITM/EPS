@@ -457,6 +457,32 @@
             margin-top: 24px;
         }
 
+        .sort-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .sort-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-compact {
+            padding: 6px 10px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+
+        .sort-hint {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
         /* Swipe to Delete Styles */
         .swipe-row {
             position: relative;
@@ -652,22 +678,23 @@
         .dragging-clone {
             background: var(--card-bg);
             border-radius: 8px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22), 0 0 0 2px rgba(255, 255, 255, 0.6);
             pointer-events: none;
             transition: transform 90ms ease, box-shadow 0.2s ease, opacity 0.18s ease;
-            transform: translateZ(0) scale(1.02);
-            opacity: 0.92;
-            filter: drop-shadow(0 16px 40px rgba(0, 0, 0, 0.24));
-            animation: dragFloat 1.05s ease-in-out infinite alternate;
+            transform: translateZ(0) scale(1.03);
+            opacity: 0.95;
+            filter: drop-shadow(0 16px 42px rgba(0, 0, 0, 0.25));
+            animation: dragFloat 0.9s ease-in-out infinite alternate;
         }
 
         .drop-target {
             position: relative;
-            border: 2px solid rgba(79, 70, 229, 0.25);
-            box-shadow: 0 10px 26px rgba(79, 70, 229, 0.2);
-            animation: dropHint 0.8s ease-in-out infinite alternate;
-            transform: translateY(8px);
-            background: rgba(255, 255, 255, 0.72);
+            border: 2px solid rgba(79, 70, 229, 0.5);
+            box-shadow: 0 12px 30px rgba(79, 70, 229, 0.28), inset 0 0 0 2px rgba(255, 255, 255, 0.85);
+            animation: dropHint 0.65s ease-in-out infinite alternate;
+            transform: translateY(6px);
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.16), rgba(14, 165, 233, 0.12));
+            isolation: isolate;
         }
 
         .drop-target::after {
@@ -677,13 +704,22 @@
             top: 50%;
             transform: translate(-50%, -50%);
             background: rgba(255, 255, 255, 0.9);
-            padding: 4px 10px;
+            padding: 6px 12px;
             border-radius: 999px;
-            font-size: 11px;
+            font-size: 12px;
             color: var(--primary-color);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.16);
             pointer-events: none;
-            animation: dropHintText 1s ease-in-out infinite alternate;
+            animation: dropHintText 0.8s ease-in-out infinite alternate;
+        }
+
+        .drop-target::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, rgba(79, 70, 229, 0.14), rgba(59, 130, 246, 0.1));
+            z-index: -1;
         }
 
         @keyframes dragPulse {
@@ -720,12 +756,12 @@
 
         @keyframes dragFloat {
             from {
-                transform: translateZ(0) scale(1.02) translateY(-2px);
-                opacity: 0.92;
+                transform: translateZ(0) scale(1.03) translateY(-2px);
+                opacity: 0.9;
             }
 
             to {
-                transform: translateZ(0) scale(1.04) translateY(2px);
+                transform: translateZ(0) scale(1.05) translateY(2px);
                 opacity: 0.98;
             }
         }
@@ -1068,6 +1104,17 @@
                         <button class="btn-glass btn-primary" onclick="app.processExcel()" style="width:100%;">Update
                             Plan</button>
                     </div>
+                </div>
+            </div>
+
+            <div class="sort-row">
+                <span class="metric-label" style="white-space:nowrap;">Urutan:</span>
+                <div class="sort-toggle">
+                    <button class="btn-glass btn-compact" data-sort-mode="date"
+                        onclick="app.setSortMode('date')">Urut Plan</button>
+                    <button class="btn-glass btn-compact" data-sort-mode="manual"
+                        onclick="app.setSortMode('manual')">Urut Manual</button>
+                    <span class="sort-hint">Drag otomatis pindah ke urutan manual</span>
                 </div>
             </div>
 
