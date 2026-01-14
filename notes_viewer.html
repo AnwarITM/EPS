@@ -157,6 +157,7 @@
       display: flex;
       flex-direction: column;
       min-height: 180px;
+      overflow-anchor: none;
     }
 
     .catatan:hover {
@@ -204,6 +205,16 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
       min-height: 76px;
+      max-height: 96px;
+      opacity: 1;
+      transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
+    }
+
+    .catatan.open .summary {
+      max-height: 0;
+      opacity: 0;
+      padding-top: 0;
+      padding-bottom: 0;
     }
 
     .detail {
@@ -488,6 +499,7 @@
 
       const toggle = () => {
         const open = detail.classList.toggle("open");
+        card.classList.toggle("open", open);
         btn.textContent = open ? "Tutup" : "Buka detail";
       };
 
