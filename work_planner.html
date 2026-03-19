@@ -1485,6 +1485,9 @@
                 if (data && data.tabs) {
                     // Sync dari Firebase ke app state
                     app.state.tabs = Object.values(data.tabs || {});
+                    if (app.state.tabs.length === 0) {
+                        app.state.tabs = [createNewTab(0)];
+                    }
                     app.state.currentTabId = data.currentTabId || 0;
                     
                     // Ensure each tab has proper structure
@@ -1515,7 +1518,7 @@
                     isFirebaseSynced = true;
                 } else {
                     // No data in Firebase, start fresh
-                    app.state.tabs = [];
+                    app.state.tabs = [createNewTab(0)];
                     app.state.currentTabId = 0;
                     app.saveState();
                     app.renderTabs();
