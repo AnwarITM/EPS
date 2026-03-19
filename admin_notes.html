@@ -351,6 +351,119 @@
       display: none !important;
     }
 
+    /* Tab Navigation */
+    .admin-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid rgba(99, 102, 241, 0.2);
+      padding-bottom: 0;
+    }
+
+    .admin-tab {
+      padding: 12px 20px;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      color: #312e81;
+      transition: all 0.2s ease;
+      margin-bottom: -2px;
+    }
+
+    .admin-tab:hover {
+      background: rgba(99, 102, 241, 0.15);
+    }
+
+    .admin-tab.active {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      border-color: #6366f1;
+      box-shadow: 0 -4px 12px rgba(99, 102, 241, 0.2);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* User Management Styles */
+    .user-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .user-card {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .user-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .user-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .user-name {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 16px;
+    }
+
+    .user-id {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .user-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
     @media (max-width: 640px) {
       body {
         padding: 12px;
@@ -364,6 +477,33 @@
       .grid {
         grid-template-columns: 1fr;
       }
+
+      .admin-tabs {
+        flex-wrap: wrap;
+      }
+
+      .admin-tab {
+        flex: 1;
+        min-width: 120px;
+        text-align: center;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .user-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .user-actions {
+        width: 100%;
+      }
+
+      .user-actions .btn {
+        flex: 1;
+      }
     }
   </style>
 </head>
@@ -372,63 +512,119 @@
   <h1 class="page-title seasonal-snow-target" data-seasonal-title>Admin Catatan Troubleshoot ATM</h1>
   <p class="subtitle">Atur catatan, tab/grup, dan konten teknikal.</p>
 
-  <div class="card seasonal-snow-target" id="loginForm">
+  <!-- Admin Login (Hidden by default) -->
+  <div class="card seasonal-snow-target hidden" id="loginForm">
     <h2>Login Admin</h2>
     <label for="adminPassword">Password</label>
     <input type="password" id="adminPassword" placeholder="Masukkan password admin">
     <button class="btn" onclick="login()">Login</button>
   </div>
 
-  <div class="grid hidden" id="adminPanels">
-    <div class="card collapsible collapsed" id="panelTabs">
-      <div class="panel-head">
-        <h2>Kelola Tab/Grup</h2>
-        <button class="panel-toggle" type="button" onclick="togglePanel('panelTabs')">Buka</button>
+  <script>
+    // Check session flag from dashboard click
+    (function() {
+      const showLogin = sessionStorage.getItem('showAdminLogin');
+      if (showLogin === 'true') {
+        document.getElementById('loginForm').classList.remove('hidden');
+        setTimeout(() => document.getElementById('adminPassword').focus(), 100);
+        // Clear the flag
+        sessionStorage.removeItem('showAdminLogin');
+      }
+    })();
+  </script>
+
+  <!-- Tab Navigation -->
+  <div class="admin-tabs hidden" id="adminTabs">
+    <button class="admin-tab active" onclick="switchTab('catatan')">📝 Catatan</button>
+    <button class="admin-tab" onclick="switchTab('users')">👥 Manage Users</button>
+  </div>
+
+  <!-- Tab Content: Catatan -->
+  <div class="tab-content active" id="tabCatatan">
+    <div class="grid hidden" id="adminPanels">
+      <div class="card collapsible collapsed" id="panelTabs">
+        <div class="panel-head">
+          <h2>Kelola Tab/Grup</h2>
+          <button class="panel-toggle" type="button" onclick="togglePanel('panelTabs')">Buka</button>
+        </div>
+        <div class="panel-body">
+          <label for="tabName">Nama tab baru</label>
+          <input type="text" id="tabName" placeholder="contoh: BCA, DANAMON, NCR">
+          <button class="btn btn-secondary" onclick="tambahTab()">Tambah Tab</button>
+          <div class="tab-list" id="tabList"></div>
+        </div>
       </div>
-      <div class="panel-body">
-        <label for="tabName">Nama tab baru</label>
-        <input type="text" id="tabName" placeholder="contoh: BCA, DANAMON, NCR">
-        <button class="btn btn-secondary" onclick="tambahTab()">Tambah Tab</button>
-        <div class="tab-list" id="tabList"></div>
+
+      <div class="card collapsible" id="panelForm">
+        <div class="panel-head">
+          <h2 id="formTitle">Input Catatan Baru</h2>
+          <button class="panel-toggle" type="button" onclick="togglePanel('panelForm')">Tutup</button>
+        </div>
+        <div class="panel-body">
+          <label for="judul">Judul</label>
+          <input type="text" id="judul" placeholder="Judul catatan">
+
+          <label for="kategori">Kategori (opsional)</label>
+          <input type="text" id="kategori" placeholder="Misal: NCR, PSU, EPP">
+
+          <label for="tabSelect">Pilih Tab/Grup</label>
+          <select id="tabSelect">
+            <option value="">Tidak ada tab</option>
+          </select>
+
+          <label for="isi">Isi catatan</label>
+          <textarea id="isi" placeholder="Isi catatan troubleshooting..." rows="6"></textarea>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn" onclick="simpanCatatan()">Simpan Catatan</button>
+            <button class="btn btn-ghost" type="button" onclick="resetForm()">Reset</button>
+          </div>
+          <p id="notif"></p>
+        </div>
       </div>
     </div>
 
-    <div class="card collapsible" id="panelForm">
-      <div class="panel-head">
-        <h2 id="formTitle">Input Catatan Baru</h2>
-        <button class="panel-toggle" type="button" onclick="togglePanel('panelForm')">Tutup</button>
+    <div class="card hidden" id="listPanel">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+        <h2 style="margin:0;">Daftar Catatan</h2>
+        <span class="pill" id="countNotes">0 catatan</span>
       </div>
-      <div class="panel-body">
-        <label for="judul">Judul</label>
-        <input type="text" id="judul" placeholder="Judul catatan">
-
-        <label for="kategori">Kategori (opsional)</label>
-        <input type="text" id="kategori" placeholder="Misal: NCR, PSU, EPP">
-
-        <label for="tabSelect">Pilih Tab/Grup</label>
-        <select id="tabSelect">
-          <option value="">Tidak ada tab</option>
-        </select>
-
-        <label for="isi">Isi catatan</label>
-        <textarea id="isi" placeholder="Isi catatan troubleshooting..." rows="6"></textarea>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn" onclick="simpanCatatan()">Simpan Catatan</button>
-          <button class="btn btn-ghost" type="button" onclick="resetForm()">Reset</button>
-        </div>
-        <p id="notif"></p>
-      </div>
+      <div class="tab-list" id="tabFilters"></div>
+      <div id="daftarCatatan" class="note-list"></div>
     </div>
   </div>
 
-  <div class="card hidden" id="listPanel">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-      <h2 style="margin:0;">Daftar Catatan</h2>
-      <span class="pill" id="countNotes">0 catatan</span>
+  <!-- Tab Content: Users -->
+  <div class="tab-content" id="tabUsers">
+    <!-- Form User -->
+    <div class="card" style="margin-bottom: 20px;">
+      <h2 id="userFormTitle">Tambah User Baru</h2>
+      <p style="color:#64748b; font-size:13px; margin-bottom:16px;">User ID digunakan untuk login di <strong>Work Planner</strong>. Halaman lain tetap bisa diakses tanpa login.</p>
+      <div class="form-row">
+        <div>
+          <label for="userId">User ID</label>
+          <input type="text" id="userId" placeholder="Contoh: 1033">
+        </div>
+        <div>
+          <label for="userName">Nama</label>
+          <input type="text" id="userName" placeholder="Contoh: John Doe">
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn" onclick="saveUser()">Simpan User</button>
+        <button class="btn btn-ghost" type="button" onclick="resetUserForm()">Reset</button>
+      </div>
+      <p id="userNotif" style="margin-top: 8px; font-weight: 600; color: #16a34a;"></p>
     </div>
-    <div class="tab-list" id="tabFilters"></div>
-    <div id="daftarCatatan" class="note-list"></div>
+
+    <!-- User List -->
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+        <h2 style="margin:0;">Daftar User</h2>
+        <span class="pill" id="userCount">0 user</span>
+      </div>
+      <div class="user-list" id="userList"></div>
+    </div>
   </div>
 
   <!-- Firebase SDK -->
@@ -453,8 +649,30 @@
     let editingKey = null;
     let tabsMap = {};
     let activeTabFilter = "all";
+    let editingUserId = null;
+    let usersData = {};
 
     const el = (id) => document.getElementById(id);
+
+    // Tab Switching
+    function switchTab(tabName) {
+      // Update active tab button
+      document.querySelectorAll('.admin-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      event.target.classList.add('active');
+
+      // Show/hide tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+
+      // Load data for tab
+      if (tabName === 'users') {
+        loadUsers();
+      }
+    }
 
     function togglePanel(id) {
       const panel = el(id);
@@ -476,8 +694,11 @@
       const input = el("adminPassword").value;
       if (input === passwordBenar) {
         el("loginForm").classList.add("hidden");
+        el("adminTabs").classList.remove("hidden");
+        el("tabCatatan").classList.remove("hidden");
         el("adminPanels").classList.remove("hidden");
         el("listPanel").classList.remove("hidden");
+        el("adminPassword").value = "";
         loadTabs();
         loadCatatan();
       } else {
@@ -756,6 +977,160 @@
           }
         });
       }
+    }
+
+    // ============================================
+    // USER MANAGEMENT FUNCTIONS
+    // ============================================
+
+    function loadUsers() {
+      db.ref("users").once("value", (snapshot) => {
+        usersData = snapshot.val() || {};
+        renderUserList();
+      });
+    }
+
+    function renderUserList() {
+      const list = el("userList");
+      const entries = Object.entries(usersData).sort((a, b) => {
+        const nameA = (a[1].name || '').toLowerCase();
+        const nameB = (b[1].name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
+      el("userCount").textContent = `${entries.length} user`;
+
+      if (entries.length === 0) {
+        list.innerHTML = "<p style='text-align:center; color:#64748b;'>Belum ada user.</p>";
+        return;
+      }
+
+      list.innerHTML = "";
+      entries.forEach(([userId, user]) => {
+        const card = document.createElement("div");
+        card.className = "user-card";
+
+        const avatar = document.createElement("div");
+        avatar.className = "user-avatar";
+        avatar.textContent = (user.name || userId).charAt(0).toUpperCase();
+
+        const info = document.createElement("div");
+        info.className = "user-info";
+
+        const details = document.createElement("div");
+        details.className = "user-details";
+
+        const name = document.createElement("div");
+        name.className = "user-name";
+        name.textContent = user.name || "Tanpa nama";
+
+        const uid = document.createElement("div");
+        uid.className = "user-id";
+        uid.textContent = `ID: ${userId}`;
+
+        details.appendChild(name);
+        details.appendChild(uid);
+        info.appendChild(avatar);
+        info.appendChild(details);
+
+        const actions = document.createElement("div");
+        actions.className = "user-actions";
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "btn btn-secondary";
+        editBtn.style.padding = "8px 12px";
+        editBtn.style.fontSize = "13px";
+        editBtn.textContent = "Edit";
+        editBtn.onclick = () => editUser(userId);
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "btn btn-danger";
+        delBtn.style.padding = "8px 12px";
+        delBtn.style.fontSize = "13px";
+        delBtn.textContent = "Hapus";
+        delBtn.onclick = () => deleteUser(userId);
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+
+        card.appendChild(info);
+        card.appendChild(actions);
+        list.appendChild(card);
+      });
+    }
+
+    function saveUser() {
+      const userId = el("userId").value.trim();
+      const userName = el("userName").value.trim();
+
+      if (!userId) {
+        alert("User ID wajib diisi!");
+        return;
+      }
+
+      const userData = {
+        userId: userId,
+        name: userName || "",
+        updatedAt: Date.now()
+      };
+
+      if (!editingUserId) {
+        userData.createdAt = Date.now();
+      }
+
+      db.ref("users/" + userId).set(userData, (error) => {
+        if (error) {
+          alert("Gagal menyimpan user: " + error.message);
+        } else {
+          el("userNotif").innerText = editingUserId 
+            ? "User berhasil diupdate!" 
+            : "User berhasil ditambahkan!";
+          resetUserForm();
+          loadUsers();
+          setTimeout(() => el("userNotif").innerText = "", 3000);
+        }
+      });
+    }
+
+    function editUser(userId) {
+      const user = usersData[userId];
+      if (user) {
+        el("userId").value = userId;
+        el("userId").disabled = true;
+        el("userName").value = user.name || "";
+        editingUserId = userId;
+        el("userFormTitle").innerText = "Edit User";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+
+    function deleteUser(userId) {
+      const user = usersData[userId];
+      const userName = user?.name || userId;
+      
+      if (!confirm(`Yakin ingin menghapus user "${userName}" (ID: ${userId})?`)) {
+        return;
+      }
+
+      db.ref("users/" + userId).remove((error) => {
+        if (error) {
+          alert("Gagal menghapus user: " + error.message);
+        } else {
+          if (editingUserId === userId) {
+            resetUserForm();
+          }
+          loadUsers();
+        }
+      });
+    }
+
+    function resetUserForm() {
+      editingUserId = null;
+      el("userId").value = "";
+      el("userId").disabled = false;
+      el("userName").value = "";
+      el("userFormTitle").innerText = "Tambah User Baru";
+      el("userNotif").innerText = "";
     }
   </script>
 </body>

@@ -256,9 +256,19 @@
 
   <!-- TAP 5X SCRIPT -->
   <script>
+    // Click on title "Task Manager CE" to access admin (1 click only)
+    const titleEl = document.querySelector('[data-seasonal-title]');
+    if (titleEl) {
+      titleEl.addEventListener('click', () => {
+        // Set session flag and redirect to admin notes
+        sessionStorage.setItem('showAdminLogin', 'true');
+        window.location.href = 'admin_notes.html';
+      });
+    }
+
+    // Body click for reload (existing feature - tap 5x)
     let tapCount = 0;
     let tapTimer;
-
     document.body.addEventListener("click", () => {
       tapCount++;
       clearTimeout(tapTimer);
