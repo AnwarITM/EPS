@@ -273,6 +273,38 @@
             max-width: 440px;
             box-shadow: var(--shadow-lg);
         }
+
+        /* Theme Selection Grid */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-3);
+        }
+
+        .theme-option {
+            background: var(--surface-2);
+            border: 1px solid var(--surface-border);
+            border-radius: var(--radius-md);
+            padding: var(--space-3);
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            cursor: pointer;
+            transition: var(--transition-base);
+        }
+
+        .theme-option:hover {
+            background: var(--surface-3);
+            transform: translateY(-2px);
+        }
+
+        .theme-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px var(--surface-border);
+        }
     </style>
 </head>
 
@@ -421,6 +453,38 @@
         </div>
     </div>
 
+    <!-- Theme Modal -->
+    <div id="themeModal" class="modal-overlay" onclick="if(event.target==this)closeThemeModal()">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
+                <h3 style="margin: 0;">Pilih Tema</h3>
+                <button class="btn btn-secondary btn-compact" onclick="closeThemeModal()">✕</button>
+            </div>
+            <div class="theme-grid">
+                <div class="theme-option" onclick="selectTheme('default')">
+                    <div class="theme-preview" style="background: #FF0036;"></div>
+                    <span>Default</span>
+                </div>
+                <div class="theme-option" onclick="selectTheme('linear')">
+                    <div class="theme-preview" style="background: #5e6ad2;"></div>
+                    <span>Linear</span>
+                </div>
+                <div class="theme-option" onclick="selectTheme('vercel')">
+                    <div class="theme-preview" style="background: #000000;"></div>
+                    <span>Vercel</span>
+                </div>
+                <div class="theme-option" onclick="selectTheme('apple')">
+                    <div class="theme-preview" style="background: #0066cc;"></div>
+                    <span>Apple</span>
+                </div>
+                <div class="theme-option" onclick="selectTheme('supabase')">
+                    <div class="theme-preview" style="background: #3ecf8e;"></div>
+                    <span>Supabase</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Confirm Modal -->
     <div id="confirmModal" class="modal-overlay">
         <div class="modal-content" style="text-align: center;">
@@ -452,6 +516,10 @@
             <span class="nav-icon">⏱</span>
             <span>Lembur</span>
         </a>
+        <a href="javascript:void(0)" class="nav-link" onclick="openThemeModal()">
+            <span class="nav-icon">⚙️</span>
+            <span>Settings</span>
+        </a>
     </nav>
 
     <!-- Firebase -->
@@ -461,6 +529,19 @@
     <script src="theme_manager.js?v=20260110"></script>
     <script src="work_planner.js?v=20260501"></script>
     <script>
+        function openThemeModal() {
+            document.getElementById('themeModal').style.display = 'flex';
+        }
+
+        function closeThemeModal() {
+            document.getElementById('themeModal').style.display = 'none';
+        }
+
+        function selectTheme(themeId) {
+            setGlobalTheme(themeId);
+            closeThemeModal();
+        }
+
         // Use existing Firebase logic from original file
         const firebaseConfig = {
             apiKey: "AIzaSyAqqwSS1KTnAjfGcqvV_-TRHMYXJlTjtlI",
