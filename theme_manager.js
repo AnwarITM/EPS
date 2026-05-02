@@ -11,11 +11,25 @@ const DARK_THEME = `theme-dark.css?v=${THEME_VERSION}`;
 // Function to update icon visibility
 function updateThemeIcon(themeFile) {
     const isDark = themeFile.includes('dark');
-    const icon = isDark ? '☀️' : '🌙'; // If dark, show sun to switch to light. If light, show moon.
+    
+    // Update the new toggle switch if it exists
+    const toggleCheckbox = document.getElementById('themeToggleCheckbox');
+    if (toggleCheckbox) {
+        toggleCheckbox.checked = isDark;
+    }
 
-    // Update all theme buttons on the page
+    // Update old theme buttons for compatibility
+    const label = isDark ? 'Mode Terang' : 'Mode Gelap';
+    const nextMode = isDark ? 'light' : 'dark';
     const btns = document.querySelectorAll('[onclick="toggleGlobalTheme()"]');
-    btns.forEach(btn => btn.textContent = icon);
+    btns.forEach((btn) => {
+        if (btn.tagName !== 'INPUT') {
+            btn.textContent = label;
+        }
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('title', label);
+        btn.dataset.themeTarget = nextMode;
+    });
 }
 
 // Function to immediately apply theme (can be called in head)

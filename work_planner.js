@@ -61,12 +61,38 @@ const app = {
             } catch (e) { console.error('Corrupt state', e); }
         }
 
-        if (this.state.tabs.length === 0) {
-            this.state.tabs = [createNewTab(0)];
+        this.normalizeState();
+        this.saveState();
+    },
+
+    normalizeState(skipSave = false) {
+        if (!this.state) {
+            this.state = { tabs: [], currentTabId: 0 };
         }
 
-        // Migrate old data: ensure each row has id + status
-        this.state.tabs.forEach(tab => {
+        if (!Array.isArray(this.state.tabs)) {
+            this.state.tabs = [];
+        }
+
+        if (this.state.tabs.length === 0) {
+            this.state.tabs = [createNewTab(0)];
+            this.state.currentTabId = 0;
+        }
+
+        const usedIds = new Set();
+        this.state.tabs.forEach((tab, tabIndex) => {
+            let tabId = Number(tab.id);
+            if (!Number.isFinite(tabId) || usedIds.has(tabId)) {
+                tabId = tabIndex;
+                while (usedIds.has(tabId)) tabId += 1;
+            }
+            tab.id = tabId;
+            usedIds.add(tabId);
+            tab.name = tab.name || `Tab ${tab.id + 1}`;
+            tab.excelConfig = tab.excelConfig || {
+                lastMapWsid: '',
+                lastMapPlan: ''
+            };
             tab.data = (tab.data || []).map((row, idx) => {
                 if (!row.id) row.id = 'm_' + Date.now() + Math.random();
                 if (!row.status) row.status = 'outstanding';
@@ -83,7 +109,11 @@ const app = {
             });
             tab.sortMode = tab.sortMode || 'date';
         });
-        this.saveState();
+
+        const currentTabId = Number(this.state.currentTabId);
+        const hasCurrentTab = this.state.tabs.some(tab => tab.id === currentTabId);
+        this.state.currentTabId = hasCurrentTab ? currentTabId : this.state.tabs[0].id;
+        if (!skipSave) this.saveState();
     },
 
     saveState() {
@@ -105,11 +135,16 @@ const app = {
     // --- Tab Management ---
     renderTabs() {
         const container = $('#tabsContainer');
+        if (!container) return;
         const addBtn = container.querySelector('.tab-add-btn');
+        const delBtn = container.querySelector('.tab-delete-btn');
+        if (!addBtn) return;
 
-        // Clear existing tabs (keep add btn)
+        // Clear existing tabs (keep control buttons)
         Array.from(container.children).forEach(c => {
-            if (!c.classList.contains('tab-add-btn')) c.remove();
+            if (!c.classList.contains('tab-add-btn') && !c.classList.contains('tab-delete-btn')) {
+                c.remove();
+            }
         });
 
         this.state.tabs.forEach(tab => {
@@ -130,24 +165,132 @@ const app = {
         $('#fileExcel').value = '';
     },
 
+    // --- Professional Dialogs ---
+    showConfirm(options) {
+        const overlay = $('#confirmModal');
+        const titleEl = $('#confirmTitle');
+        const msgEl = $('#confirmMessage');
+        const confirmBtn = $('#confirmBtn');
+        const cancelBtn = $('#cancelBtn');
+
+        titleEl.textContent = options.title || 'Konfirmasi';
+        msgEl.textContent = options.message || '';
+        confirmBtn.textContent = options.confirmText || 'Ya, Hapus';
+        cancelBtn.textContent = options.cancelText || 'Batal';
+
+        confirmBtn.className = `btn-glass ${options.isDanger ? 'btn-danger' : 'btn-primary'}`;
+        
+        overlay.style.display = 'flex';
+
+        return new Promise((resolve) => {
+            const handleConfirm = () => {
+                overlay.style.display = 'none';
+                confirmBtn.removeEventListener('click', handleConfirm);
+                cancelBtn.removeEventListener('click', handleCancel);
+                resolve(true);
+            };
+            const handleCancel = () => {
+                overlay.style.display = 'none';
+                confirmBtn.removeEventListener('click', handleConfirm);
+                cancelBtn.removeEventListener('click', handleCancel);
+                resolve(false);
+            };
+            confirmBtn.onclick = handleConfirm;
+            cancelBtn.onclick = handleCancel;
+        });
+    },
+
+    showAlert(message, title = 'Informasi') {
+        const overlay = $('#confirmModal');
+        $('#confirmTitle').textContent = title;
+        $('#confirmMessage').textContent = message;
+        const confirmBtn = $('#confirmBtn');
+        const cancelBtn = $('#cancelBtn');
+        
+        confirmBtn.textContent = 'OK';
+        confirmBtn.className = 'btn-glass btn-primary';
+        cancelBtn.style.display = 'none';
+        overlay.style.display = 'flex';
+
+        confirmBtn.onclick = () => {
+            overlay.style.display = 'none';
+            cancelBtn.style.display = 'inline-flex';
+        };
+    },
+
     addTab() {
-        const newId = this.state.tabs.length > 0 ? Math.max(...this.state.tabs.map(t => t.id)) + 1 : 0;
-        this.state.tabs.push(createNewTab(newId));
-        this.switchTab(newId);
+        if (this.state.tabs.length >= 4) {
+            this.showAlert("Maksimal 4 tab diperbolehkan.", "Limit Tab");
+            return;
+        }
+        
+        const modal = $('#tabModal');
+        const title = $('#tabModalTitle');
+        const input = $('#tabNameInput');
+        
+        title.textContent = "Tambah Tab";
+        input.value = `Tab ${this.state.tabs.length + 1}`;
+        this.state.isRenamingTab = false;
+        
+        modal.style.display = 'flex';
+        input.focus();
+        input.select();
     },
 
     renameTab() {
         const tab = this.getCurrentTab();
-        const newName = prompt("Rename Tab:", tab.name);
-        if (newName) {
-            tab.name = newName;
-            this.saveState();
-            this.renderTabs();
-        }
+        const modal = $('#tabModal');
+        const title = $('#tabModalTitle');
+        const input = $('#tabNameInput');
+        
+        title.textContent = "Rename Tab";
+        input.value = tab.name;
+        this.state.isRenamingTab = true;
+        
+        modal.style.display = 'flex';
+        input.focus();
+        input.select();
     },
 
-    deleteTab() {
-        if (confirm("Delete this tab and all its data?")) {
+    closeTabModal() {
+        $('#tabModal').style.display = 'none';
+    },
+
+    saveTabData() {
+        const input = $('#tabNameInput');
+        const name = input.value.trim();
+        if (!name) return;
+
+        if (this.state.isRenamingTab) {
+            const tab = this.getCurrentTab();
+            tab.name = name;
+        } else {
+            this.normalizeState();
+            const tabIds = this.state.tabs.map(t => Number(t.id)).filter(Number.isFinite);
+            const newId = tabIds.length > 0 ? Math.max(...tabIds) + 1 : 0;
+            
+            const newTab = createNewTab(newId);
+            newTab.name = name;
+            
+            this.state.tabs.push(newTab);
+            this.state.currentTabId = newId;
+        }
+
+        this.saveState();
+        this.renderTabs();
+        this.renderUI();
+        this.closeTabModal();
+    },
+
+    async deleteTab() {
+        const tab = this.getCurrentTab();
+        const confirmed = await this.showConfirm({
+            title: 'Hapus Tab',
+            message: `Delete tab "${tab.name}"?`,
+            isDanger: true
+        });
+
+        if (confirmed) {
             const idx = this.state.tabs.findIndex(t => t.id === this.state.currentTabId);
             this.state.tabs.splice(idx, 1);
             if (this.state.tabs.length === 0) this.state.tabs.push(createNewTab(0));
@@ -251,16 +394,16 @@ const app = {
             tr.dataset.id = row.id;
 
             const statusClass = row.status === 'done' ? 'status-done' : 'status-outstanding';
-            const statusLabel = row.status === 'done' ? 'Done' : 'Outstanding';
+            const statusLabel = row.status === 'done' ? 'DONE' : 'OUTSTANDING';
 
             tr.innerHTML = `
-                <td class="col-order drag-handle" style="cursor: move;" draggable="false">${index + 1}</td>
-                <td onclick="app.openModal('${row.id}')"><div class="text-cell wsid-text">${row.wsid || '-'}</div></td>
-                <td onclick="app.openModal('${row.id}')"><div class="text-cell notes-text text-left">${row.notes || ''}</div></td>
-                <td onclick="app.openModal('${row.id}')"><div class="text-cell plan-text">${row.plan || this.formatPlanTs(row.planTs)}</div></td>
-                <td style="position: relative; overflow: visible;">
+                <td class="col-order drag-handle" style="cursor: move;">${index + 1}</td>
+                <td onclick="app.openModal('${row.id}')">${row.wsid || '-'}</td>
+                <td onclick="app.openModal('${row.id}')">${row.notes || ''}</td>
+                <td onclick="app.openModal('${row.id}')">${row.plan || this.formatPlanTs(row.planTs)}</td>
+                <td class="status-cell" style="position: relative;">
                     <button class="status-btn ${statusClass}" onclick="event.stopPropagation(); app.toggleStatus('${row.id}')">${statusLabel}</button>
-                    <button class="desktop-delete-btn" onclick="event.stopPropagation(); app.deleteOne('${row.id}')">Delete</button>
+                    <button class="desktop-delete-btn" onclick="event.stopPropagation(); app.deleteOne('${row.id}')">Hapus</button>
                     <div class="swipe-action-delete" onclick="event.stopPropagation(); app.deleteOne('${row.id}')">Hapus</div>
                 </td>
             `;
@@ -274,47 +417,56 @@ const app = {
     },
 
     attachSwipeEvents(tr, id) {
-        // Skip swipe when touch-based drag-and-drop is active
         const isTouchDragActive = () => this.state.touchDragging;
 
         let startX = 0;
         let startY = 0;
         let isSwiping = false;
         let swipeTriggered = false;
+        let isRevealed = false;
         const MAX_SWIPE = 80;
 
+        // Close other swiped rows when starting a new touch
         tr.addEventListener('touchstart', (e) => {
-            if (e.target.closest('.drag-handle')) return; // don't start swipe on handle
-            // Reset transition for instant response
+            if (e.target.closest('.drag-handle')) return;
+            
+            // If another row is open, close it
+            document.querySelectorAll('.swipe-row[style*="translateX"]').forEach(row => {
+                if (row !== tr) row.style.transform = 'translateX(0)';
+            });
+
             tr.style.transition = 'none';
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
+            
+            // Adjust startX if already revealed
+            if (isRevealed) {
+                startX += MAX_SWIPE; 
+            }
+            
             isSwiping = true;
             swipeTriggered = false;
         }, { passive: true });
 
         tr.addEventListener('touchmove', (e) => {
-            if (isTouchDragActive()) return;
-            if (!isSwiping) return;
+            if (isTouchDragActive() || !isSwiping) return;
             const x = e.touches[0].clientX;
             const y = e.touches[0].clientY;
             const diffX = x - startX;
             const diffY = y - startY;
 
-            // Strict threshold for horizontal swipe vs vertical scroll
             if (!swipeTriggered) {
                 if (Math.abs(diffX) > 15 && Math.abs(diffX) > Math.abs(diffY)) {
                     swipeTriggered = true;
                 } else if (Math.abs(diffY) > 15) {
-                    isSwiping = false; // Vertical scroll takes priority
+                    isSwiping = false;
                     return;
                 }
             }
 
             if (swipeTriggered) {
-                // If it's a swipe, we might want to prevent vertical scrolling
-                // diffX < 0 is swipe left (to delete)
-                const move = diffX < 0 ? Math.max(diffX, -MAX_SWIPE) : 0;
+                // Prevent swiping right beyond 0
+                const move = Math.max(-MAX_SWIPE - 20, Math.min(0, diffX));
                 tr.style.transform = `translateX(${move}px)`;
             }
         }, { passive: true });
@@ -323,7 +475,6 @@ const app = {
             if (!isSwiping) return;
             isSwiping = false;
 
-            // Clean up: Snap to positions
             tr.style.transition = 'transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
 
             const matrix = new WebKitCSSMatrix(window.getComputedStyle(tr).transform);
@@ -331,12 +482,22 @@ const app = {
 
             if (x < -40) {
                 tr.style.transform = `translateX(-${MAX_SWIPE}px)`;
+                isRevealed = true;
             } else {
                 tr.style.transform = 'translateX(0)';
+                isRevealed = false;
+            }
+        });
+        
+        // Click anywhere on the row to close swipe
+        tr.addEventListener('click', (e) => {
+            if (isRevealed && !e.target.classList.contains('swipe-action-delete')) {
+                tr.style.transform = 'translateX(0)';
+                isRevealed = false;
             }
         });
 
-        tr.oncontextmenu = (e) => { e.preventDefault(); }; // Disable long-press delete to avoid accidental data loss
+        tr.oncontextmenu = (e) => { e.preventDefault(); };
     },
 
     attachTouchReorder(tr, handle, row) {
@@ -501,7 +662,7 @@ const app = {
         const notesVal = $('#mInputNotes').value;
         const planVal = $('#mInputPlan').value;
 
-        if (!wsidVal) { alert("WSID harus diisi"); return; }
+        if (!wsidVal) { this.showAlert("WSID harus diisi", "Input Kurang"); return; }
         const parsedPlan = this.parsePlanValue(planVal);
         const wsidKey = this.getWsidKey(wsidVal);
 
@@ -551,23 +712,44 @@ const app = {
         }
     },
 
-    deleteOne(id) {
-        const tab = this.getCurrentTab();
-        tab.data = tab.data.filter(r => r.id !== id);
-        this.saveState();
-        this.renderTableData();
+    async deleteOne(id) {
+        const row = this.getCurrentTab().data.find(r => r.id === id);
+        const confirmed = await this.showConfirm({
+            title: 'Hapus Data',
+            message: `Hapus data "${row.wsid || 'tanpa ID'}"?`,
+            isDanger: true
+        });
+
+        if (confirmed) {
+            const tab = this.getCurrentTab();
+            tab.data = tab.data.filter(r => r.id !== id);
+            this.saveState();
+            this.renderTableData();
+        }
     },
 
-    deleteAll() {
-        if (confirm("Delete ALL items in this tab?")) {
+    async deleteAll() {
+        const confirmed = await this.showConfirm({
+            title: 'Hapus Semua',
+            message: 'Clear all items in this tab?',
+            isDanger: true
+        });
+
+        if (confirmed) {
             this.getCurrentTab().data = [];
             this.saveState();
             this.renderTableData();
         }
     },
 
-    resetStatus() {
-        if (confirm("Reset all status to Outstanding?")) {
+    async resetStatus() {
+        const confirmed = await this.showConfirm({
+            title: 'Reset Status',
+            message: 'Reset all status to OUTSTANDING?',
+            confirmText: 'Ya, Reset'
+        });
+
+        if (confirmed) {
             this.getCurrentTab().data.forEach(r => r.status = 'outstanding');
             this.saveState();
             this.renderTableData();
@@ -624,7 +806,7 @@ const app = {
                         });
                     });
 
-                } catch (err) { console.error(err); alert("Gagal baca Excel"); }
+                } catch (err) { console.error(err); this.showAlert("Gagal baca Excel", "Error"); }
             });
         }
     },
@@ -642,7 +824,7 @@ const app = {
 
         const mapWSID = $('#mapWSID').value;
         const mapPlan = $('#mapPlan').value;
-        if (!mapWSID || !mapPlan) { alert("Pilih kolom WSID dan Plan dulu"); return; }
+        if (!mapWSID || !mapPlan) { this.showAlert("Pilih kolom WSID dan Plan dulu", "Input Kurang"); return; }
 
         const { matrix, headerIdx } = this.state.tempExcelData;
         const headers = matrix[headerIdx].map(String);
@@ -698,7 +880,7 @@ const app = {
         if (updateCount === 0 && matchAttempts > 0) {
             const sampleExcel = Array.from(excelMap.keys()).slice(0, 3).join(', ');
             const sampleList = tab.data.slice(0, 3).map(r => r.wsid).join(', ');
-            alert(`0 Data terupdate! \nKemungkinan WSID tidak cocok.\n\nContoh di Excel: ${sampleExcel}\nContoh di List: ${sampleList}\n\nPastikan penulisan sama persis.`);
+            this.showAlert(`0 Data terupdate! \nKemungkinan WSID tidak cocok.\n\nContoh di Excel: ${sampleExcel}\nContoh di List: ${sampleList}\n\nPastikan penulisan sama persis.`, "Update Fail");
             return;
         }
 
@@ -708,7 +890,7 @@ const app = {
 
         $('#excelMappingArea').style.display = 'none';
         $('#fileExcel').value = '';
-        alert(`Berhasil update ${updateCount} data dari ${excelMap.size} baris Excel.`);
+        this.showAlert(`Berhasil update ${updateCount} data dari ${excelMap.size} baris Excel.`, "Success");
     },
 
     sortDataByDate(data) {
@@ -737,20 +919,25 @@ const app = {
         document.body.removeChild(a);
     },
 
-    importUniversal(input) {
+    async importUniversal(input) {
         const file = input.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const json = JSON.parse(e.target.result);
                 let list = Array.isArray(json) ? json : (json.data || []);
 
-                if (!Array.isArray(list)) throw new Error("Invalid Format");
+                if (!Array.isArray(list)) throw new Error("Format tidak valid");
 
                 const tab = this.getCurrentTab();
                 if (tab.data.length > 0) {
-                    if (!confirm(`Import ${list.length} items? This will APPEND to current list.`)) return;
+                    const confirmed = await this.showConfirm({
+                        title: 'Import Data',
+                        message: `Import ${list.length} items?`,
+                        confirmText: 'Ya, Import'
+                    });
+                    if (!confirmed) return;
                 }
 
                 const baseOrder = tab.data.length;
@@ -773,9 +960,9 @@ const app = {
                 tab.data = [...tab.data, ...newData];
                 this.saveState();
                 this.renderTableData();
-                alert("Import Successful");
+                this.showAlert("Berhasil mengimpor data.", "Import Sukses");
 
-            } catch (err) { alert("Error: " + err.message); }
+            } catch (err) { this.showAlert("Gagal: " + err.message, "Error Import"); }
             input.value = '';
         };
         reader.readAsText(file);
