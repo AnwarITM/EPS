@@ -28,9 +28,9 @@ const app = {
     state: {
         tabs: [],
         currentTabId: 0,
-        filter: 'all',
-        touchDragging: false
+        filter: 'all'
     },
+    sortableInstance: null,
 
     init() {
         this.detectPlatform();
@@ -108,6 +108,10 @@ const app = {
                 return row;
             });
             tab.sortMode = tab.sortMode || 'date';
+            // Ensure data is sorted by date initially if that's the mode
+            if (tab.sortMode === 'date') {
+                this.sortDataByDate(tab.data);
+            }
         });
 
         const currentTabId = Number(this.state.currentTabId);
@@ -361,6 +365,59 @@ const app = {
         }
     },
 
+    getDisplayRows() {
+        const tab = this.getCurrentTab();
+        if (!tab) return [];
+
+        let filtered = tab.data;
+        if (this.state.filter !== 'all') {
+            filtered = filtered.filter(row => row.status === this.state.filter);
+        }
+
+        return (tab.sortMode === 'manual')
+            ? [...filtered].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+            : filtered;
+    },
+    
+    initSortable() {
+        if (this.sortableInstance) {
+            this.sortableInstance.destroy();
+        }
+        const tbody = $('#tableBody');
+        if (!tbody) return;
+
+        this.sortableInstance = Sortable.create(tbody, {
+            handle: '.drag-handle',
+            animation: 200,
+            delay: 150, // Essential for mobile to allow scrolling
+            delayOnTouchOnly: true,
+            touchStartThreshold: 5, // Prevent accidental drags
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            forceFallback: true, // Forces custom drag image for touch devices
+            fallbackClass: 'sortable-fallback',
+            fallbackOnBody: true, // Appends the ghost to body so it isn't clipped
+            fallbackTolerance: 3, // Solves some touch scrolling issues
+            scroll: true, // Auto-scroll while dragging
+            onStart: (evt) => {
+                if (navigator.vibrate) navigator.vibrate(20); // Haptic feedback
+                document.body.classList.add('is-dragging');
+            },
+            onEnd: (evt) => {
+                document.body.classList.remove('is-dragging');
+                const { newIndex, oldIndex, item } = evt;
+                if (oldIndex === newIndex) return;
+
+                const displayRows = this.getDisplayRows();
+                const draggedItemId = item.dataset.id;
+                const targetItemId = newIndex < displayRows.length ? displayRows[newIndex].id : null;
+
+                this.reorderItems(draggedItemId, targetItemId);
+            }
+        });
+    },
+
     renderTableData() {
         const tab = this.getCurrentTab();
         const tbody = $('#tableBody');
@@ -379,14 +436,7 @@ const app = {
 
         if (tab.sortMode === 'date') this.sortDataByDate(tab.data);
 
-        let filtered = tab.data;
-        if (this.state.filter !== 'all') {
-            filtered = filtered.filter(row => row.status === this.state.filter);
-        }
-
-        const displayRows = (tab.sortMode === 'manual')
-            ? [...filtered].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-            : filtered;
+        const displayRows = this.getDisplayRows();
 
         displayRows.forEach((row, index) => {
             const tr = document.createElement('tr');
@@ -408,19 +458,19 @@ const app = {
                 </td>
             `;
 
-            const handle = tr.querySelector('.drag-handle');
-
             this.attachSwipeEvents(tr, row.id);
-            this.attachTouchReorder(tr, handle, row);
             tbody.appendChild(tr);
         });
+
+        this.initSortable();
     },
 
     attachSwipeEvents(tr, id) {
-        const isTouchDragActive = () => this.state.touchDragging;
+        const isTouchDragActive = () => document.body.classList.contains('is-dragging');
 
         let startX = 0;
         let startY = 0;
+        let startTime = 0;
         let isSwiping = false;
         let swipeTriggered = false;
         let isRevealed = false;
@@ -428,9 +478,10 @@ const app = {
 
         // Close other swiped rows when starting a new touch
         tr.addEventListener('touchstart', (e) => {
-            if (e.target.closest('.drag-handle')) return;
+            const touchX = e.touches[0].clientX - tr.getBoundingClientRect().left;
+            // Prevent swipe if handle is touched OR if touch is very close to the left edge (margin of error)
+            if (e.target.closest('.drag-handle') || touchX < 60) return;
             
-            // If another row is open, close it
             document.querySelectorAll('.swipe-row[style*="translateX"]').forEach(row => {
                 if (row !== tr) row.style.transform = 'translateX(0)';
             });
@@ -438,8 +489,8 @@ const app = {
             tr.style.transition = 'none';
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
+            startTime = Date.now();
             
-            // Adjust startX if already revealed
             if (isRevealed) {
                 startX += MAX_SWIPE; 
             }
@@ -449,13 +500,23 @@ const app = {
         }, { passive: true });
 
         tr.addEventListener('touchmove', (e) => {
-            if (isTouchDragActive() || !isSwiping) return;
+            if (isTouchDragActive() || !isSwiping) {
+                isSwiping = false;
+                return;
+            }
+            
             const x = e.touches[0].clientX;
             const y = e.touches[0].clientY;
             const diffX = x - startX;
             const diffY = y - startY;
 
             if (!swipeTriggered) {
+                // If they hold for > 200ms without significant horizontal movement, assume they are trying to drag or just holding
+                if (Date.now() - startTime > 200 && Math.abs(diffX) < 15) {
+                    isSwiping = false;
+                    return;
+                }
+
                 if (Math.abs(diffX) > 15 && Math.abs(diffX) > Math.abs(diffY)) {
                     swipeTriggered = true;
                 } else if (Math.abs(diffY) > 15) {
@@ -465,7 +526,6 @@ const app = {
             }
 
             if (swipeTriggered) {
-                // Prevent swiping right beyond 0
                 const move = Math.max(-MAX_SWIPE - 20, Math.min(0, diffX));
                 tr.style.transform = `translateX(${move}px)`;
             }
@@ -489,7 +549,6 @@ const app = {
             }
         });
         
-        // Click anywhere on the row to close swipe
         tr.addEventListener('click', (e) => {
             if (isRevealed && !e.target.classList.contains('swipe-action-delete')) {
                 tr.style.transform = 'translateX(0)';
@@ -498,122 +557,6 @@ const app = {
         });
 
         tr.oncontextmenu = (e) => { e.preventDefault(); };
-    },
-
-    attachTouchReorder(tr, handle, row) {
-        if (!handle) return;
-
-        let pointerTargetId = null;
-        let dragClone = null;
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
-
-        const clearDropTargets = () => {
-            $$('tr.swipe-row').forEach(r => r.classList.remove('drop-target'));
-        };
-
-        const cleanup = () => {
-            this.state.touchDragging = false;
-            pointerTargetId = null;
-            tr.classList.remove('dragging-source');
-            tr.style.opacity = '1';
-            clearDropTargets();
-            if (dragClone && dragClone.parentNode) dragClone.parentNode.removeChild(dragClone);
-            dragClone = null;
-        };
-
-        const findTargetRow = (clientX, clientY) => {
-            const hit = document.elementFromPoint(clientX, clientY);
-            if (hit) {
-                const directRow = hit.closest('tr.swipe-row');
-                if (directRow) return directRow;
-            }
-            // Fallback to nearest row by vertical distance so drops still register
-            let nearest = null;
-            let best = Infinity;
-            $$('tr.swipe-row').forEach(r => {
-                const rect = r.getBoundingClientRect();
-                const dist = Math.abs((rect.top + rect.height / 2) - clientY);
-                if (dist < best) {
-                    best = dist;
-                    nearest = r;
-                }
-            });
-            return nearest;
-        };
-
-        handle.addEventListener('pointerdown', (e) => {
-            // Let desktop/mouse keep the native drag flow
-            if (e.pointerType === 'mouse') return;
-            if (e.button !== 0) return;
-
-            e.preventDefault();
-            // Force manual mode so the drag result is not overridden by date sorting
-            this.setSortMode('manual', { skipRender: true, force: true });
-            this.ensureManualOrder(this.getCurrentTab());
-            this.saveState();
-            this.syncSortButtons();
-
-            const rect = tr.getBoundingClientRect();
-            dragOffsetX = e.clientX - rect.left;
-            dragOffsetY = e.clientY - rect.top;
-
-            this.state.touchDragging = true;
-            tr.classList.add('dragging-source');
-            tr.style.opacity = '0.5';
-
-            // Lightweight floating clone so users see the drag position
-            dragClone = tr.cloneNode(true);
-            dragClone.classList.add('dragging-clone');
-            Object.assign(dragClone.style, {
-                position: 'fixed',
-                left: `${rect.left}px`,
-                top: `${rect.top}px`,
-                width: `${rect.width}px`,
-                pointerEvents: 'none',
-                zIndex: '1200',
-                opacity: '0.9',
-                transform: 'translateZ(0)',
-                transition: 'none'
-            });
-            document.body.appendChild(dragClone);
-
-            if (navigator.vibrate) navigator.vibrate(30);
-
-            const moveHandler = (ev) => {
-                if (!this.state.touchDragging) return;
-                ev.preventDefault();
-                const targetRow = findTargetRow(ev.clientX, ev.clientY);
-                pointerTargetId = targetRow ? targetRow.dataset.id : null;
-
-                $$('tr.swipe-row').forEach(r => {
-                    const isTarget = targetRow && r.dataset.id === pointerTargetId && r.dataset.id !== row.id;
-                    r.classList.toggle('drop-target', isTarget);
-                });
-
-                if (dragClone) {
-                    dragClone.style.left = `${ev.clientX - dragOffsetX}px`;
-                    dragClone.style.top = `${ev.clientY - dragOffsetY}px`;
-                }
-            };
-
-            const upHandler = (ev) => {
-                if (ev) ev.preventDefault();
-                if (pointerTargetId && pointerTargetId !== row.id) {
-                    this.reorderItems(row.id, pointerTargetId);
-                }
-                handle.releasePointerCapture(e.pointerId);
-                document.removeEventListener('pointermove', moveHandler);
-                document.removeEventListener('pointerup', upHandler);
-                document.removeEventListener('pointercancel', upHandler);
-                cleanup();
-            };
-
-            handle.setPointerCapture(e.pointerId);
-            document.addEventListener('pointermove', moveHandler, { passive: false });
-            document.addEventListener('pointerup', upHandler, { passive: false });
-            document.addEventListener('pointercancel', upHandler, { passive: false });
-        });
     },
 
     // --- Actions ---
@@ -759,17 +702,27 @@ const app = {
     reorderItems(srcId, targetId) {
         const tab = this.getCurrentTab();
         const srcIdx = tab.data.findIndex(r => r.id === srcId);
-        const tgtIdx = tab.data.findIndex(r => r.id === targetId);
 
-        if (srcIdx >= 0 && tgtIdx >= 0) {
-            const item = tab.data.splice(srcIdx, 1)[0];
-            tab.data.splice(tgtIdx, 0, item);
-            tab.data.forEach((r, idx) => r.sortOrder = idx);
-            this.setSortMode('manual', { skipRender: true, force: true });
-            this.saveState();
-            this.renderTableData();
-            this.highlightRow(targetId);
+        if (srcIdx < 0) return;
+
+        const item = tab.data.splice(srcIdx, 1)[0];
+
+        if (targetId) {
+            const tgtIdx = tab.data.findIndex(r => r.id === targetId);
+            if (tgtIdx >= 0) {
+                 tab.data.splice(tgtIdx, 0, item);
+            } else {
+                tab.data.push(item); // Failsafe
+            }
+        } else {
+            tab.data.push(item); // Dropped at the end
         }
+
+        tab.data.forEach((r, idx) => r.sortOrder = idx);
+        this.setSortMode('manual', { skipRender: true, force: true });
+        this.saveState();
+        this.renderTableData();
+        this.highlightRow(srcId);
     },
 
     // --- Excel Integration ---

@@ -176,9 +176,9 @@
             }
             
             /* Column Widths for Mobile */
-            th:nth-child(1), td:nth-child(1) { width: 30px; text-align: center; } /* No */
-            th:nth-child(2), td:nth-child(2) { width: 80px; } /* WSID */
-            th:nth-child(3), td:nth-child(3) { width: auto; } /* Notes - allow full wrap */
+            th:nth-child(1), td:nth-child(1) { width: 60px; text-align: center; } /* No / Drag Handle */
+            th:nth-child(2), td:nth-child(2) { width: 65px; } /* WSID */
+            th:nth-child(3), td:nth-child(3) { width: auto; } /* Notes */
             th:nth-child(4), td:nth-child(4) { width: 60px; text-align: center; } /* Plan */
             th:nth-child(5), td:nth-child(5) { width: 85px; text-align: center; } /* Status */
         }
@@ -481,6 +481,10 @@
                     <div class="theme-preview" style="background: #3ecf8e;"></div>
                     <span>Supabase</span>
                 </div>
+                <div class="theme-option" onclick="selectTheme('liquid-glass')">
+                    <div class="theme-preview" style="background: linear-gradient(135deg, #0f172a, #4c1d95); border: 1px solid rgba(255,255,255,0.4);"></div>
+                    <span>Liquid Glass</span>
+                </div>
             </div>
         </div>
     </div>
@@ -526,6 +530,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     
+    <!-- Drag and Drop Library -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
     <script src="theme_manager.js?v=20260110"></script>
     <script src="work_planner.js?v=20260501"></script>
     <script>

@@ -137,6 +137,52 @@ th {
     letter-spacing: 0.05em;
 }
 
+/* Drag and Drop Professional Styles */
+.drag-handle {
+    cursor: grab !important;
+    user-select: none;
+    color: var(--text-secondary);
+    font-weight: 600;
+    position: relative;
+    padding-left: 22px !important; /* Increased for wider hit area */
+    touch-action: none; /* ESSENTIAL: Prevents scrolling when touching the handle */
+}
+
+.drag-handle::before {
+    content: "⋮⋮";
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.5; /* More visible */
+    font-size: 14px; /* Larger icon */
+    letter-spacing: -1px;
+}
+
+.sortable-ghost {
+    opacity: 0.3;
+    background: var(--primary-color) !important;
+}
+
+.sortable-chosen {
+    background: var(--surface-2) !important;
+    box-shadow: var(--shadow-lg);
+}
+
+.sortable-drag,
+.sortable-fallback {
+    opacity: 1 !important;
+    background: var(--surface-1) !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    z-index: 9999 !important; /* Ensure it floats above everything */
+    pointer-events: none; /* Prevent ghost from intercepting touch events */
+    transition: none !important; /* Prevents lag if tr had a transition */
+}
+
+body.is-dragging * {
+    cursor: grabbing !important;
+}
+
 /* Inputs */
 input.cell-edit,
 textarea.cell-edit {
