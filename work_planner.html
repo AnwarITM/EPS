@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Work Planner • EPS</title>
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#0070f3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Unified Task & WSID Planner">
+    <script>
+        const CAN_LOAD_MANIFEST = location.protocol === 'http:' || location.protocol === 'https:';
+        if (CAN_LOAD_MANIFEST) {
+            const manifestLink = document.createElement('link');
+            manifestLink.rel = 'manifest';
+            manifestLink.href = 'manifest.json';
+            document.head.appendChild(manifestLink);
+        }
+    </script>
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="design-tokens.css?v=20260110">
+    <link rel="stylesheet" href="styles.css?v=20260110">
+    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=20260110">
+
+    <!-- Excel Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+
+    <style>
+        .app-header {
+            padding: var(--space-4) 0;
+            margin-bottom: var(--space-4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--surface-border);
+        }
+
+        .app-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary-color);
+            letter-spacing: -0.02em;
+        }
+
+        /* Tabs */
+        .tabs-wrapper {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+            border-bottom: 1px solid var(--surface-border);
+            margin-bottom: var(--space-6);
+            padding: var(--space-2) 0;
+            overflow-x: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .tabs-wrapper::-webkit-scrollbar { display: none; }
+
+        .tab-item {
+            padding: var(--space-2) var(--space-1);
+            cursor: pointer;
+            white-space: nowrap;
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            position: relative;
+            transition: var(--transition-base);
+        }
+
+        .tab-item.active { color: var(--primary-color); }
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary-color);
+        }
+
+        /* Metrics */
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-3);
+            margin-bottom: var(--space-6);
+        }
+        
+        @media (max-width: 600px) {
+            .dashboard-row {
+                gap: var(--space-2);
+            }
+            .metric-card {
+                padding: var(--space-2);
+            }
+            .metric-val {
+                font-size: clamp(16px, 4vw, 20px);
+            }
+        }
+
+        .metric-card {
+            background: var(--surface-1);
+            padding: var(--space-3);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .metric-val {
+            font-size: clamp(18px, 5vw, 24px);
+            font-weight: 800;
+            color: var(--primary-color);
+        }
+
+        .metric-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+        }
+
+        /* Table Optimization */
+        .table-responsive {
+            background: var(--surface-1);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow-x: hidden;
+            margin-bottom: var(--space-6);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        
+        th, td {
+            padding: 12px 8px;
+            font-size: 13px;
+            vertical-align: middle;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+            line-height: 1.4;
+        }
+
+        th {
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
+        .status-cell {
+            overflow: visible !important;
+        }
+
+        @media (max-width: 600px) {
+            th, td {
+                padding: 12px 6px;
+                font-size: 12px;
+            }
+            
+            /* Column Widths for Mobile */
+            th:nth-child(1), td:nth-child(1) { width: 60px; text-align: center; } /* No / Drag Handle */
+            th:nth-child(2), td:nth-child(2) { width: 65px; } /* WSID */
+            th:nth-child(3), td:nth-child(3) { width: auto; } /* Notes */
+            th:nth-child(4), td:nth-child(4) { width: 60px; text-align: center; } /* Plan */
+            th:nth-child(5), td:nth-child(5) { width: 85px; text-align: center; } /* Status */
+        }
+
+        /* Status Badges */
+        .status-btn {
+            padding: 6px 4px;
+            border-radius: var(--radius-full);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border: 1px solid transparent;
+            cursor: pointer;
+            width: 100%;
+            display: block;
+            text-align: center;
+        }
+
+        .status-btn.status-outstanding {
+            background: var(--status-outstanding-bg);
+            color: var(--status-outstanding-text);
+            border-color: var(--status-outstanding-border);
+        }
+
+        .status-btn.status-done {
+            background: var(--status-done-bg);
+            color: var(--status-done-text);
+            border-color: var(--status-done-border);
+        }
+
+        /* Swipe and Row Styling */
+        .swipe-row {
+            position: relative;
+            background: var(--surface-1);
+            transition: transform 0.3s ease;
+            z-index: 1;
+        }
+
+        .swipe-action-delete {
+            position: absolute;
+            right: -80px;
+            top: 0;
+            bottom: 0;
+            width: 80px;
+            background: var(--danger-color);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: inset 1px 0 3px rgba(0,0,0,0.2);
+            border-top-right-radius: var(--radius-lg);
+            border-bottom-right-radius: var(--radius-lg);
+            z-index: -1;
+        }
+
+        .desktop-delete-btn { display: none; }
+
+        @media (min-width: 1024px) {
+            .desktop-delete-btn {
+                display: inline-block;
+                margin-left: 4px;
+                padding: 4px 8px;
+                font-size: 10px;
+                background: var(--surface-2);
+                border: 1px solid var(--surface-border);
+                border-radius: var(--radius-sm);
+                color: var(--danger-color);
+            }
+        }
+
+        /* Modal Overlays */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: var(--z-modal);
+            padding: var(--space-4);
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            border-radius: var(--radius-xl);
+            padding: var(--space-8);
+            width: 100%;
+            max-width: 440px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Theme Selection Grid */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-3);
+        }
+
+        .theme-option {
+            background: var(--surface-2);
+            border: 1px solid var(--surface-border);
+            border-radius: var(--radius-md);
+            padding: var(--space-3);
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            cursor: pointer;
+            transition: var(--transition-base);
+        }
+
+        .theme-option:hover {
+            background: var(--surface-3);
+            transform: translateY(-2px);
+        }
+
+        .theme-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px var(--surface-border);
+        }
+    </style>
+</head>
+
+<body class="auth-pending">
+    <div class="container">
+        <!-- Login Overlay -->
+        <div id="loginOverlay" class="modal-overlay">
+            <div class="modal-content" style="text-align: center;">
+                <h1 style="margin-bottom: var(--space-2);">Work Planner</h1>
+                <p style="color: var(--text-secondary); margin-bottom: var(--space-6);">Input User ID to continue</p>
+                <input type="text" id="loginUserId" class="cell-edit" style="text-align: center; margin-bottom: var(--space-4);" placeholder="User ID" onkeypress="if(event.key==='Enter')login()">
+                <button class="btn btn-primary" style="width: 100%;" onclick="login()">Login</button>
+                <div id="loginError" style="color: var(--danger-color); font-size: var(--font-size-xs); margin-top: var(--space-3);"></div>
+            </div>
+        </div>
+
+        <div class="app-shell">
+            <header class="app-header">
+                <div class="app-title" style="cursor: pointer;" onclick="app.renameTab()">Work Planner</div>
+                <div style="display: flex; gap: var(--space-2);">
+                    <button class="btn btn-secondary btn-compact" onclick="$('#fileImport').click()">Import</button>
+                    <button class="btn btn-secondary btn-compact" onclick="app.exportTabData()">Export</button>
+                    <input type="file" id="fileImport" hidden accept=".json" onchange="app.importUniversal(this)">
+                </div>
+            </header>
+
+            <div id="userInfoBar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); font-size: var(--font-size-sm);">
+                <div style="display: flex; align-items: center; gap: var(--space-2);">
+                    <span id="userInfoText">User</span>
+                </div>
+                <button class="btn btn-danger btn-compact" onclick="logout()">Logout</button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs-wrapper" id="tabsContainer">
+                <div class="tab-add-btn btn btn-secondary btn-compact" onclick="app.addTab()" style="cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0;" title="Tambah Tab">+</div>
+                <div class="tab-delete-btn btn btn-danger btn-compact" onclick="app.deleteTab()" style="cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0;" title="Hapus Tab Aktif">✕</div>
+            </div>
+
+            <!-- Metrics -->
+            <div class="dashboard-row">
+                <div class="metric-card">
+                    <div class="metric-val" id="mTotal">0</div>
+                    <div class="metric-label">Total</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-val" id="mDone">0</div>
+                    <div class="metric-label">Done</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-val" id="mOut">0</div>
+                    <div class="metric-label">Outstanding</div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls-card">
+                <div class="main-toolbar">
+                    <button class="btn btn-secondary" onclick="app.resetStatus()">↺ Reset Status</button>
+                    <div style="flex: 1; display: flex; align-items: center; gap: var(--space-2); background: var(--surface-2); padding: 8px 12px; border-radius: var(--radius-md);">
+                        <span class="metric-label">Excel:</span>
+                        <input type="file" id="fileExcel" accept=".xlsx" style="font-size: 12px; width: 100%;">
+                    </div>
+                </div>
+
+                <div id="excelMappingArea" style="display:none; border-top: 1px dashed var(--surface-border); padding-top: var(--space-4);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-4); align-items: flex-end;">
+                        <div>
+                            <div class="metric-label">WSID Col</div>
+                            <select id="mapWSID" class="cell-edit"></select>
+                        </div>
+                        <div>
+                            <div class="metric-label">Plan Col</div>
+                            <select id="mapPlan" class="cell-edit"></select>
+                        </div>
+                        <button class="btn btn-primary" onclick="app.processExcel()">Update</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: 4px;">
+                    <button class="btn btn-secondary btn-compact active" data-filter="all" onclick="app.setFilter('all')">All</button>
+                    <button class="btn btn-secondary btn-compact" data-filter="done" onclick="app.setFilter('done')">Done</button>
+                    <button class="btn btn-secondary btn-compact" data-filter="outstanding" onclick="app.setFilter('outstanding')">Outstanding</button>
+                    <button class="btn btn-danger btn-compact" onclick="app.deleteAll()" style="margin-left: auto;">🗑 Delete All</button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-responsive">
+                <table id="mainTable">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>WSID</th>
+                            <th>Notes</th>
+                            <th>Plan</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+                <div id="emptyState" style="display:none; text-align:center; padding: var(--space-12);">
+                    <div style="font-size: 48px; opacity: 0.2; margin-bottom: var(--space-4);">📋</div>
+                    <p style="color: var(--text-secondary);">No data found. Add items to get started.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="dataModal" class="modal-overlay" onclick="if(event.target==this)app.closeModal()">
+        <div class="modal-content">
+            <h3 id="modalTitle" style="margin-bottom: var(--space-4);">Add Data</h3>
+            <input type="hidden" id="editId">
+            <div style="margin-bottom: var(--space-4);">
+                <label class="metric-label">WSID</label>
+                <input type="text" id="mInputWsid" class="cell-edit" placeholder="Enter ID...">
+            </div>
+            <div style="margin-bottom: var(--space-4);">
+                <label class="metric-label">Catatan</label>
+                <textarea id="mInputNotes" class="cell-edit" rows="3" placeholder="Add notes..."></textarea>
+            </div>
+            <div style="margin-bottom: var(--space-6);">
+                <label class="metric-label">Plan</label>
+                <input type="text" id="mInputPlan" class="cell-edit" placeholder="e.g. Jan 2024">
+            </div>
+            <div style="display: flex; gap: var(--space-3);">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="app.closeModal()">Batal</button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="app.saveModalData()">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Modal -->
+    <div id="tabModal" class="modal-overlay" onclick="if(event.target==this)app.closeTabModal()">
+        <div class="modal-content">
+            <h3 id="tabModalTitle" style="margin-bottom: var(--space-4);">Tambah Tab</h3>
+            <div style="margin-bottom: var(--space-6);">
+                <label class="metric-label">Nama Tab</label>
+                <input type="text" id="tabNameInput" class="cell-edit" placeholder="Nama tab baru..." onkeypress="if(event.key==='Enter')app.saveTabData()">
+            </div>
+            <div style="display: flex; gap: var(--space-3);">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="app.closeTabModal()">Batal</button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="app.saveTabData()">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Modal -->
+    <div id="themeModal" class="modal-overlay" onclick="if(event.target==this)closeThemeModal()">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
+                <h3 style="margin: 0;">Pilih Tema</h3>
+                <button class="btn btn-secondary btn-compact" onclick="closeThemeModal()">✕</button>
+            </div>
+            <div class="theme-grid">
+                <div class="theme-option" onclick="selectTheme('default')">
+                    <div class="theme-preview" style="background: #FF0036;"></div>
+                    <span>Default</span>
+                </div>
+                <div class="theme-option" onclick="selectTheme('linear')">
+                    <div class="theme-preview" style="background: #5e6ad2;"></div>
+                    <span>Linear</span>
+                </div>
+                <div class="theme-option" onclick="selectTheme('vercel')">
+                    <div class="theme-preview" style="background: #000000;"></div>
+                    <span>Vercel</span>
+                </div>
+                <div class="theme-option" onclick="selectTheme('apple')">
+                    <div class="theme-preview" style="background: #0066cc;"></div>
+                    <span>Apple</span>
+                </div>
+                <div class="theme-option" onclick="selectTheme('supabase')">
+                    <div class="theme-preview" style="background: #3ecf8e;"></div>
+                    <span>Supabase</span>
+                </div>
+                <div class="theme-option" onclick="selectTheme('liquid-glass')">
+                    <div class="theme-preview" style="background: linear-gradient(135deg, #0f172a, #4c1d95); border: 1px solid rgba(255,255,255,0.4);"></div>
+                    <span>Liquid Glass</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content" style="text-align: center;">
+            <h3 id="confirmTitle" style="margin-bottom: var(--space-2);">Konfirmasi</h3>
+            <p id="confirmMessage" style="color: var(--text-secondary); margin-bottom: var(--space-6); font-size: var(--font-size-sm);"></p>
+            <div style="display: flex; gap: var(--space-3);">
+                <button id="cancelBtn" class="btn btn-secondary" style="flex: 1;">Batal</button>
+                <button id="confirmBtn" class="btn btn-danger" style="flex: 1;">Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="fab" onclick="app.addData()">+</button>
+
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-link">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span>
+            <span>Home</span>
+        </a>
+        <a href="work_planner.html" class="nav-link active">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4.5h6"></path><path d="M8 10h8"></path><path d="M8 14h8"></path><path d="M8 18h5"></path></svg></span>
+            <span>Planner</span>
+        </a>
+        <a href="notes_viewer.html" class="nav-link">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1Z"></path><path d="M8 8h7"></path><path d="M8 12h7"></path><path d="M7 20V6"></path></svg></span>
+            <span>Notes</span>
+        </a>
+        <a href="cek_lembur/index.html" class="nav-link">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l3 2"></path><path d="M9 2h6"></path></svg></span>
+            <span>Lembur</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" onclick="openThemeModal()">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"></path><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.98 2.98l-.04-.04A1.8 1.8 0 0 0 14.8 19a1.8 1.8 0 0 0-1.08 1.65V21a2.1 2.1 0 0 1-4.2 0v-.06A1.8 1.8 0 0 0 8.4 19a1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.98-2.98l.04-.04A1.8 1.8 0 0 0 5 15.2a1.8 1.8 0 0 0-1.65-1.08H3a2.1 2.1 0 0 1 0-4.2h.06A1.8 1.8 0 0 0 5 8.8a1.8 1.8 0 0 0-.36-1.98L4.6 6.78A2.1 2.1 0 1 1 7.58 3.8l.04.04A1.8 1.8 0 0 0 9.6 5a1.8 1.8 0 0 0 1.08-1.65V3a2.1 2.1 0 0 1 4.2 0v.06A1.8 1.8 0 0 0 16 5a1.8 1.8 0 0 0 1.98-.36l.04-.04A2.1 2.1 0 1 1 21 7.58l-.04.04A1.8 1.8 0 0 0 19 9.6a1.8 1.8 0 0 0 1.65 1.08H21a2.1 2.1 0 0 1 0 4.2h-.06A1.8 1.8 0 0 0 19.4 15Z"></path></svg></span>
+            <span>Settings</span>
+        </a>
+    </nav>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- Drag and Drop Library -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <script src="theme_manager.js?v=20260110"></script>
+    <script src="work_planner.js?v=20260501"></script>
+    <script>
+        function openThemeModal() {
+            document.getElementById('themeModal').style.display = 'flex';
+        }
+
+        function closeThemeModal() {
+            document.getElementById('themeModal').style.display = 'none';
+        }
+
+        function selectTheme(themeId) {
+            setGlobalTheme(themeId);
+            closeThemeModal();
+        }
+
+        // Use existing Firebase logic from original file
+        const firebaseConfig = {
+            apiKey: "AIzaSyAqqwSS1KTnAjfGcqvV_-TRHMYXJlTjtlI",
+            authDomain: "catatan-troubleshoot-atm-2b5a4.firebaseapp.com",
+            databaseURL: "https://catatan-troubleshoot-atm-2b5a4-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "catatan-troubleshoot-atm-2b5a4",
+            storageBucket: "catatan-troubleshoot-atm-2b5a4.firebasestorage.app",
+            messagingSenderId: "441198643571",
+            appId: "1:441198643571:web:7ee3c056d933acb3515d06"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let currentUserId = null;
+        let isFirebaseSynced = false;
+        let saveTimeout = null;
+
+        function setAuthViewState(state) {
+            document.body.classList.remove('auth-pending', 'auth-login-required', 'auth-ready');
+            document.body.classList.add(state);
+        }
+
+        function setLoginError(message = '') {
+            const errorEl = document.getElementById('loginError');
+            if (errorEl) errorEl.textContent = message;
+        }
+
+        function checkAuth() {
+            const savedUserId = sessionStorage.getItem('userId');
+            if (savedUserId) {
+                setAuthViewState('auth-pending');
+                validateUserAndLoad(savedUserId);
+            } else {
+                showLoginOverlay();
+            }
+        }
+
+        function showLoginOverlay() {
+            setAuthViewState('auth-login-required');
+            document.getElementById('loginOverlay').style.display = 'flex';
+        }
+
+        function hideLoginOverlay() {
+            document.getElementById('loginOverlay').style.display = 'none';
+            setAuthViewState('auth-ready');
+            const userName = sessionStorage.getItem('userName') || currentUserId;
+            document.getElementById('userInfoText').textContent = `Welcome, ${userName}`;
+        }
+
+        async function validateUserAndLoad(userId) {
+            try {
+                const snapshot = await db.ref('users/' + userId).once('value');
+                const user = snapshot.val();
+                if (user) {
+                    currentUserId = userId;
+                    sessionStorage.setItem('userId', userId);
+                    sessionStorage.setItem('userName', user.name || userId);
+                    hideLoginOverlay();
+                    loadWorkPlannerFromFirebase(userId);
+                } else {
+                    setLoginError('User ID tidak ditemukan.');
+                    showLoginOverlay();
+                }
+            } catch (error) {
+                setLoginError('Gagal koneksi database.');
+                showLoginOverlay();
+            }
+        }
+
+        function login() {
+            const userId = document.getElementById('loginUserId').value.trim();
+            if (userId) validateUserAndLoad(userId);
+        }
+
+        async function logout() {
+            const confirmed = await app.showConfirm({ title: 'Logout', message: 'Apakah Anda ingin logout?', confirmText: 'Logout', isDanger: true });
+            if (confirmed) {
+                sessionStorage.removeItem('userId');
+                window.location.href = 'index.html';
+            }
+        }
+
+        let isLocalChange = false;
+        function loadWorkPlannerFromFirebase(userId) {
+            db.ref('work_planner/' + userId).on('value', (snapshot) => {
+                if (isLocalChange) return;
+                const data = snapshot.val();
+                if (!app.state) app.state = { tabs: [], currentTabId: 0 };
+                if (data && data.tabs) {
+                    app.state.tabs = Object.entries(data.tabs).map(([id, tab]) => ({ ...tab, id: Number(id) })).sort((a, b) => a.id - b.id);
+                    app.state.currentTabId = data.currentTabId || 0;
+                    app.normalizeState(true);
+                    app.renderTabs();
+                    app.renderUI();
+                    isFirebaseSynced = true;
+                }
+            });
+        }
+
+        const originalSaveState = app.saveState.bind(app);
+        app.saveState = function() {
+            originalSaveState();
+            if (currentUserId && isFirebaseSynced) {
+                isLocalChange = true;
+                if (saveTimeout) clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    db.ref('work_planner/' + currentUserId).update({
+                        currentTabId: app.state.currentTabId,
+                        tabs: app.state.tabs.reduce((acc, tab) => {
+                            acc[tab.id] = { id: tab.id, name: tab.name, sortMode: tab.sortMode || 'date', excelConfig: tab.excelConfig || {}, data: tab.data || [] };
+                            return acc;
+                        }, {})
+                    }).then(() => { setTimeout(() => { isLocalChange = false; }, 200); });
+                }, 500);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+
+</html>

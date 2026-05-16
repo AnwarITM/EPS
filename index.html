@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Manager CE</title>
+
+  <!-- PWA Meta -->
+  <meta name="theme-color" content="#0070f3" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TaskManager" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  
+  <script>
+    const APP_VERSION = '20260110';
+    const CACHE_PREFIX = 'eps-work-planner-v';
+    const SW_URL = `./sw.js?v=${APP_VERSION}`;
+    const SW_SCRIPT_URL = new URL(SW_URL, location.href).href;
+    const IS_LOCALHOST = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+    const CAN_LOAD_MANIFEST = location.protocol === 'http:' || location.protocol === 'https:';
+    const CAN_USE_SERVICE_WORKER = location.protocol === 'https:' || IS_LOCALHOST;
+
+    if (CAN_LOAD_MANIFEST) {
+      const manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      manifestLink.href = 'manifest.json';
+      document.head.appendChild(manifestLink);
+    }
+
+    if (CAN_USE_SERVICE_WORKER && 'caches' in window) {
+      const savedVersion = localStorage.getItem('eps-app-version');
+      const alreadyRefreshed = sessionStorage.getItem('eps-version-refreshed');
+
+      if (savedVersion !== APP_VERSION && !alreadyRefreshed) {
+        caches.keys()
+          .then((names) => Promise.all(
+            names
+              .filter((name) => name.startsWith(CACHE_PREFIX) && name !== `${CACHE_PREFIX}${APP_VERSION}`)
+              .map((name) => caches.delete(name))
+          ))
+          .finally(() => {
+            localStorage.setItem('eps-app-version', APP_VERSION);
+            sessionStorage.setItem('eps-version-refreshed', 'yes');
+            window.location.reload();
+          });
+      }
+    }
+  </script>
+
+  <!-- Favicon and Icons -->
+  <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192x192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="icon-512x512.png" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="design-tokens.css?v=20260110">
+  <link rel="stylesheet" href="styles.css?v=20260110">
+  <link id="theme-link" rel="stylesheet" href="theme-light.css?v=20260110">
+  <script src="theme_manager.js?v=20260110"></script>
+  
+  <style>
+    .hero-card {
+      background: var(--surface-1);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8) var(--space-8) var(--space-6);
+      box-shadow: var(--shadow-lg);
+      margin-top: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      position: relative;
+    }
+
+    .hero-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .hero-title {
+      font-size: clamp(28px, 7vw, 40px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      margin: 0;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Theme Selection Grid */
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-3);
+    }
+
+    .theme-option {
+      background: var(--surface-2);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      cursor: pointer;
+      transition: var(--transition-base);
+    }
+
+    .theme-option:hover {
+      background: var(--surface-3);
+      transform: translateY(-2px);
+    }
+
+    .theme-preview {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px var(--surface-border);
+    }
+
+    .app-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-4);
+      margin-top: var(--space-6);
+    }
+
+    .app-card {
+      background: var(--surface-1);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-md);
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      transition: var(--transition-base);
+    }
+
+    .app-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .app-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .app-icon--planner { background: var(--gradient-primary); }
+    .app-icon--notes { background: linear-gradient(135deg, #7928ca, #ff0080); }
+    .app-icon--overtime { background: linear-gradient(135deg, #f5a623, #ff4d4d); }
+
+    .app-title {
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+    }
+
+    .app-desc {
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+    }
+
+    @media (max-width: 640px) {
+      .hero-main { flex-direction: column; }
+      .hero-actions { flex-direction: column; }
+      .hero-actions .btn { width: 100%; }
+      .hero-card { padding: var(--space-6); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="hero-card">
+      <div class="hero-main">
+        <h1 class="hero-title">
+          <span data-seasonal-title style="cursor: pointer;">TASK MANAGER CE</span>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Theme Modal -->
+    <div id="themeModal" class="modal-overlay" onclick="if(event.target==this)closeThemeModal()" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1000; padding: var(--space-4);">
+      <div class="modal-content" style="background: var(--bg-color); border-radius: var(--radius-xl); padding: var(--space-8); width: 100%; max-width: 440px; box-shadow: var(--shadow-lg);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
+          <h3 style="margin: 0;">Pilih Tema</h3>
+          <button class="btn btn-secondary btn-compact" onclick="closeThemeModal()">✕</button>
+        </div>
+        <div class="theme-grid">
+          <div class="theme-option" onclick="selectTheme('default')">
+            <div class="theme-preview" style="background: #FF0036;"></div>
+            <span>Default</span>
+          </div>
+          <div class="theme-option" onclick="selectTheme('linear')">
+            <div class="theme-preview" style="background: #5e6ad2;"></div>
+            <span>Linear</span>
+          </div>
+          <div class="theme-option" onclick="selectTheme('vercel')">
+            <div class="theme-preview" style="background: #000000;"></div>
+            <span>Vercel</span>
+          </div>
+          <div class="theme-option" onclick="selectTheme('apple')">
+            <div class="theme-preview" style="background: #0066cc;"></div>
+            <span>Apple</span>
+          </div>
+          <div class="theme-option" onclick="selectTheme('supabase')">
+            <div class="theme-preview" style="background: #3ecf8e;"></div>
+            <span>Supabase</span>
+          </div>
+          <div class="theme-option" onclick="selectTheme('liquid-glass')">
+            <div class="theme-preview" style="background: linear-gradient(135deg, #0f172a, #4c1d95); border: 1px solid rgba(255,255,255,0.4);"></div>
+            <span>Liquid Glass</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: var(--space-8);">
+      <h2 style="font-size: var(--font-size-xl); font-weight: 700; margin-bottom: var(--space-4); letter-spacing: -0.02em;">Field Tools</h2>
+      <div class="app-grid">
+        <a href="work_planner.html" class="app-card">
+          <div class="app-icon app-icon--planner">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          </div>
+          <div>
+            <p class="app-title">Work Planner</p>
+            <p class="app-desc">Task management and WSID import.</p>
+          </div>
+        </a>
+        <a href="notes_viewer.html" class="app-card">
+          <div class="app-icon app-icon--notes">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          </div>
+          <div>
+            <p class="app-title">Notes</p>
+            <p class="app-desc">Quick access to essential notes.</p>
+          </div>
+        </a>
+        <a href="cek_lembur/index.html" class="app-card">
+          <div class="app-icon app-icon--overtime">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+          <div>
+            <p class="app-title">Overtime Check</p>
+            <p class="app-desc">Excel calculation and summaries.</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-link active">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span>
+      <span>Home</span>
+    </a>
+    <a href="work_planner.html" class="nav-link">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4.5h6"></path><path d="M8 10h8"></path><path d="M8 14h8"></path><path d="M8 18h5"></path></svg></span>
+      <span>Planner</span>
+    </a>
+    <a href="notes_viewer.html" class="nav-link">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1Z"></path><path d="M8 8h7"></path><path d="M8 12h7"></path><path d="M7 20V6"></path></svg></span>
+      <span>Notes</span>
+    </a>
+    <a href="cek_lembur/index.html" class="nav-link">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l3 2"></path><path d="M9 2h6"></path></svg></span>
+      <span>Lembur</span>
+    </a>
+    <a href="javascript:void(0)" class="nav-link" onclick="openThemeModal()">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"></path><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.98 2.98l-.04-.04A1.8 1.8 0 0 0 14.8 19a1.8 1.8 0 0 0-1.08 1.65V21a2.1 2.1 0 0 1-4.2 0v-.06A1.8 1.8 0 0 0 8.4 19a1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.98-2.98l.04-.04A1.8 1.8 0 0 0 5 15.2a1.8 1.8 0 0 0-1.65-1.08H3a2.1 2.1 0 0 1 0-4.2h.06A1.8 1.8 0 0 0 5 8.8a1.8 1.8 0 0 0-.36-1.98L4.6 6.78A2.1 2.1 0 1 1 7.58 3.8l.04.04A1.8 1.8 0 0 0 9.6 5a1.8 1.8 0 0 0 1.08-1.65V3a2.1 2.1 0 0 1 4.2 0v.06A1.8 1.8 0 0 0 16 5a1.8 1.8 0 0 0 1.98-.36l.04-.04A2.1 2.1 0 1 1 21 7.58l-.04.04A1.8 1.8 0 0 0 19 9.6a1.8 1.8 0 0 0 1.65 1.08H21a2.1 2.1 0 0 1 0 4.2h-.06A1.8 1.8 0 0 0 19.4 15Z"></path></svg></span>
+      <span>Settings</span>
+    </a>
+  </nav>
+
+  <script>
+    function openThemeModal() {
+      document.getElementById('themeModal').style.display = 'flex';
+    }
+
+    function closeThemeModal() {
+      document.getElementById('themeModal').style.display = 'none';
+    }
+
+    function selectTheme(themeId) {
+      setGlobalTheme(themeId);
+      closeThemeModal();
+    }
+
+    const titleEl = document.querySelector('[data-seasonal-title]');
+    if (titleEl) {
+      titleEl.addEventListener('click', () => {
+        sessionStorage.setItem('showAdminLogin', 'true');
+        window.location.href = 'admin_notes.html';
+      });
+    }
+  </script>
+</body>
+
+</html>
