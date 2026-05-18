@@ -544,10 +544,10 @@
             const color = getCatColor(cat);
             return L.divIcon({
                 className: '',
-                html: `<div style="width:28px;height:28px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid rgba(0,0,0,0.25);box-shadow:0 2px 6px rgba(0,0,0,0.35);"></div>`,
-                iconSize: [28, 28],
-                iconAnchor: [14, 28],
-                popupAnchor: [0, -30]
+                html: `<div style="width:20px;height:20px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid rgba(0,0,0,0.25);box-shadow:0 2px 6px rgba(0,0,0,0.35);"></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 20],
+                popupAnchor: [0, -22]
             });
         }
 
@@ -577,13 +577,6 @@
                 maxZoom: 19, attribution: '© OpenStreetMap, © CartoDB'
             }).addTo(map);
 
-            // Setup Marker Clustering
-            markerClusterGroup = L.markerClusterGroup({
-                chunkedLoading: true,
-                maxClusterRadius: 40
-            });
-            map.addLayer(markerClusterGroup);
-
             // Setup Glassmorphism Tooltip Control
             const regionTooltip = L.control({position: 'topright'});
             regionTooltip.onAdd = function (map) {
@@ -605,20 +598,6 @@
                 }
             };
             regionTooltip.addTo(map);
-
-            // Setup Modern Floating Legend
-            const legend = L.control({position: 'bottomright'});
-            legend.onAdd = function (map) {
-                const div = L.DomUtil.create('div', 'modern-legend');
-                div.innerHTML = `
-                    <b>Kepadatan Titik</b>
-                    <div class="legend-row"><div class="legend-dot" style="background:#4da3ff"></div> Rendah</div>
-                    <div class="legend-row"><div class="legend-dot" style="background:#2563eb"></div> Sedang</div>
-                    <div class="legend-row"><div class="legend-dot" style="background:#1e3a8a"></div> Tinggi</div>
-                `;
-                return div;
-            };
-            legend.addTo(map);
 
             // Load precise GeoJSON boundary and render as interactive polygons
             fetch('../data/surabaya-madura.json')
@@ -862,10 +841,10 @@ out center;`;
                 const catMatch = item.category && item.category.toLowerCase().includes(searchQuery);
                 
                 if (searchQuery === '' || nameMatch || catMatch) {
-                    if (!markerClusterGroup.hasLayer(marker)) markerClusterGroup.addLayer(marker);
+                    if (!map.hasLayer(marker)) marker.addTo(map);
                     visibleCount++;
                 } else {
-                    if (markerClusterGroup.hasLayer(marker)) markerClusterGroup.removeLayer(marker);
+                    if (map.hasLayer(marker)) map.removeLayer(marker);
                 }
             });
 
@@ -937,7 +916,7 @@ out center;`;
         function loadMachinesFromFirebase() {
             machinesRef.on('value', (snapshot) => {
                 const data = snapshot.val() || {};
-                markerClusterGroup.clearLayers();
+                Object.values(markersMap).forEach(({ marker }) => map.removeLayer(marker));
                 markersMap = {};
                 Object.entries(data).forEach(([key, item]) => addMarkerToMap(key, item));
                 document.getElementById('machineCount').textContent = Object.keys(data).length;
@@ -981,7 +960,7 @@ out center;`;
             btnGroup.appendChild(delBtn);
             popupContent.appendChild(btnGroup);
             marker.bindPopup(popupContent);
-            markerClusterGroup.addLayer(marker);
+            marker.addTo(map);
             markersMap[key] = { marker, item: { ...item, category: cat } };
         }
 
