@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="design-tokens.css?v=20260110">
     <link rel="stylesheet" href="styles.css?v=20260110">
     <link id="theme-link" rel="stylesheet" href="theme-light.css?v=20260110">
+    <script src="custom_dialogs.js?v=20260518"></script>
 
     <!-- Leaflet Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -558,6 +559,44 @@
         let pendingLatLng = null;
         let searchQuery = '';
         let activePoiFilter = 'all';
+        let pressTimer = null;
+        let isPressing = false;
+
+        function startPress(latlng) {
+            cancelPress();
+            isPressing = true;
+            pressTimer = window.setTimeout(function() {
+                if (!isPressing) return;
+                
+                // Guard: Bounding Box Surabaya - Madura
+                const sbyMaduraBounds = L.latLngBounds(
+                    L.latLng(-7.45, 112.50), // Southwest
+                    L.latLng(-6.80, 114.15)  // Northeast
+                );
+
+                if (!sbyMaduraBounds.contains(latlng)) {
+                    alert("⚠️ Area di luar batas operasional. Harap pilih lokasi di sekitar Surabaya atau Madura.");
+                    return;
+                }
+
+                pendingLatLng = latlng;
+                document.getElementById('coordDisplay').textContent =
+                    `Lat: ${latlng.lat.toFixed(5)}, Lng: ${latlng.lng.toFixed(5)}`;
+                document.getElementById('machineNameInput').value = '';
+                document.getElementById('machineCategoryInput').value = 'BCA'; // Default
+                openAddModal();
+                
+                isPressing = false;
+            }, 800); // 800ms hold duration
+        }
+
+        function cancelPress() {
+            isPressing = false;
+            if (pressTimer) {
+                window.clearTimeout(pressTimer);
+                pressTimer = null;
+            }
+        }
 
         function initMap() {
             // Indonesia Bounds for max zoom out limit
@@ -637,14 +676,12 @@
                                     geojsonLayer.resetStyle(e.target);
                                     regionTooltip.update();
                                 },
-                                click: function (e) {
-                                    // Triggered when user clicks on valid operations area
-                                    pendingLatLng = e.latlng;
-                                    document.getElementById('coordDisplay').textContent =
-                                        `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
-                                    document.getElementById('machineNameInput').value = '';
-                                    document.getElementById('machineCategoryInput').value = 'BCA';
-                                    openAddModal();
+                                mousedown: function (e) {
+                                    if (e.originalEvent && e.originalEvent.button !== 0) return;
+                                    startPress(e.latlng);
+                                },
+                                touchstart: function (e) {
+                                    startPress(e.latlng);
                                 }
                             });
                         }
@@ -693,6 +730,13 @@
                                 mouseout: function (e) {
                                     gridLayer.resetStyle(e.target);
                                     regionTooltip.update();
+                                },
+                                mousedown: function (e) {
+                                    if (e.originalEvent && e.originalEvent.button !== 0) return;
+                                    startPress(e.latlng);
+                                },
+                                touchstart: function (e) {
+                                    startPress(e.latlng);
                                 }
                             });
                         }
@@ -700,26 +744,21 @@
                 })
                 .catch(e => console.error('Gagal memuat grid Surabaya:', e));
 
-            // Enable clicking anywhere on the empty map to add a machine
-            map.on('click', function(e) {
-                // Guard: Bounding Box Surabaya - Madura
-                const sbyMaduraBounds = L.latLngBounds(
-                    L.latLng(-7.45, 112.50), // Southwest
-                    L.latLng(-6.80, 114.15)  // Northeast
-                );
-
-                if (!sbyMaduraBounds.contains(e.latlng)) {
-                    alert("⚠️ Area di luar batas operasional. Harap pilih lokasi di sekitar Surabaya atau Madura.");
-                    return;
-                }
-
-                pendingLatLng = e.latlng;
-                document.getElementById('coordDisplay').textContent =
-                    `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
-                document.getElementById('machineNameInput').value = '';
-                document.getElementById('machineCategoryInput').value = 'BCA'; // Default
-                openAddModal();
+            // Universal hold-press event tracking on the empty map
+            map.on('mousedown', function(e) {
+                if (e.originalEvent && e.originalEvent.button !== 0) return;
+                startPress(e.latlng);
             });
+            map.on('mouseup', cancelPress);
+            map.on('mousemove', cancelPress);
+            map.on('zoomstart', cancelPress);
+
+            map.on('touchstart', function(e) {
+                if (e.touches && e.touches.length > 1) return;
+                startPress(e.latlng);
+            });
+            map.on('touchend', cancelPress);
+            map.on('touchmove', cancelPress);
 
             loadMachinesFromFirebase();
             loadPOILayer();
@@ -1033,15 +1072,15 @@ out center;`;
             markersMap[key] = { marker, item: { ...item, category: cat } };
         }
 
-        function deleteMachine(key) {
-            if (confirm('Hapus lokasi mesin ini?')) {
+        async function deleteMachine(key) {
+            if (await customConfirm('Hapus lokasi mesin ini?')) {
                 machinesRef.child(key).remove().catch(err => alert('Gagal: ' + err.message));
             }
         }
-        function clearAllMachines() {
+        async function clearAllMachines() {
             const count = Object.keys(markersMap).length;
             if (count === 0) return alert('Tidak ada mesin.');
-            if (confirm(`Hapus semua ${count} lokasi mesin?`)) {
+            if (await customConfirm(`Hapus semua ${count} lokasi mesin?`)) {
                 machinesRef.remove().catch(err => alert('Gagal: ' + err.message));
             }
         }

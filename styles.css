@@ -319,3 +319,84 @@ textarea.cell-edit::placeholder {
         font-size: var(--font-size-sm);
     }
 }
+
+/* EPS Premium Custom Glassmorphic Alert/Confirm Dialogs */
+.custom-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    opacity: 0;
+    transition: opacity 0.25s ease-out;
+    padding: var(--space-4);
+}
+.custom-dialog-backdrop.active {
+    opacity: 1;
+}
+.custom-dialog-box {
+    background: rgba(20, 20, 20, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-6);
+    max-width: 420px;
+    width: 100%;
+    transform: translateY(20px);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    color: #ffffff;
+    font-family: var(--font-family);
+}
+.custom-dialog-box.active {
+    transform: translateY(0);
+}
+.custom-dialog-header {
+    font-size: var(--font-size-md);
+    font-weight: 700;
+    margin-bottom: var(--space-3);
+    color: var(--primary-color);
+    letter-spacing: -0.01em;
+}
+.custom-dialog-body {
+    font-size: var(--font-size-sm);
+    color: #e4e4e7;
+    margin-bottom: var(--space-5);
+    line-height: 1.6;
+}
+.custom-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+}
+.custom-dialog-btn {
+    padding: 8px 16px;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.custom-dialog-btn.primary-btn {
+    background: var(--primary-color);
+    color: #ffffff;
+}
+.custom-dialog-btn.primary-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+.custom-dialog-btn.secondary-btn {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e4e4e7;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.custom-dialog-btn.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}

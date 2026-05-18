@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="styles.css">
   <link id="theme-link" rel="stylesheet" href="theme-light.css?v=20260110">
   <script src="theme_manager.js?v=20260110"></script>
+  <script src="custom_dialogs.js?v=20260518"></script>
   <style>
     :root {
       --radius: 12px;
@@ -781,8 +782,8 @@
       });
     }
 
-    function hapusTab(id) {
-      if (!confirm("Hapus tab ini? Catatan yang memakai tab ini tidak ikut terhapus.")) return;
+    async function hapusTab(id) {
+      if (!await customConfirm("Hapus tab ini? Catatan yang memakai tab ini tidak ikut terhapus.")) return;
       db.ref("tabs/" + id).remove((error) => {
         if (error) {
           alert("Gagal menghapus tab.");
@@ -964,8 +965,8 @@
       });
     }
 
-    function hapusCatatan(key) {
-      if (confirm("Yakin ingin menghapus catatan ini?")) {
+    async function hapusCatatan(key) {
+      if (await customConfirm("Yakin ingin menghapus catatan ini?")) {
         db.ref("catatan/" + key).remove((error) => {
           if (error) {
             alert("Gagal menghapus catatan.");
@@ -1101,11 +1102,11 @@
       }
     }
 
-    function deleteUser(userId) {
+    async function deleteUser(userId) {
       const user = usersData[userId];
       const userName = user?.name || userId;
       
-      if (!confirm(`Yakin ingin menghapus user "${userName}" (ID: ${userId})?`)) {
+      if (!await customConfirm(`Yakin ingin menghapus user "${userName}" (ID: ${userId})?`)) {
         return;
       }
 
