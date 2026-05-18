@@ -316,7 +316,7 @@
             <header class="app-header">
                 <div class="app-title">Lokasi Mesin</div>
                 <div style="display: flex; gap: var(--space-2);">
-                    <button id="poiToggleBtn" class="btn btn-secondary btn-compact" onclick="togglePOI()" title="Tampilkan/Sembunyikan lokasi BCA & Minimarket">🏪 POI ON</button>
+                    <button id="poiToggleBtn" class="btn btn-secondary btn-compact" onclick="togglePOI()" title="Tampilkan/Sembunyikan lokasi BCA & Minimarket">🏪 POI OFF</button>
                     <button class="btn btn-secondary btn-compact" onclick="clearAllMachines()">Clear All</button>
                 </div>
             </header>
@@ -336,7 +336,7 @@
                 <input type="text" id="mapSearchInput" class="search-input" placeholder="Cari mesin atau WSID..." oninput="handleSearch(this.value)">
             </div>
 
-            <div class="poi-filter-container">
+            <div class="poi-filter-container" style="display: none;">
                 <div class="poi-chip active" data-cat="all" onclick="setPoiFilter('all')">🌐 Semua POI</div>
                 <div class="poi-chip" data-cat="BCA" onclick="setPoiFilter('BCA')">🏦 BCA</div>
                 <div class="poi-chip" data-cat="Indomaret" onclick="setPoiFilter('Indomaret')">🏪 Indomaret</div>
@@ -536,7 +536,7 @@
 
         // === POI Layer (Overpass API) ===
         let poiLayerGroup = null;
-        let poiVisible = true;
+        let poiVisible = false;
         let poiCirclesByCategory = {}; // { cat: [circleMarker, ...] }
 
         // Map OSM name → our category key
@@ -559,9 +559,21 @@
         function togglePOI() {
             poiVisible = !poiVisible;
             const btn = document.getElementById('poiToggleBtn');
-            if (poiLayerGroup) {
-                if (poiVisible) { poiLayerGroup.addTo(map); btn.textContent = '🏪 POI ON'; applyPOISearchFilter(); }
-                else { map.removeLayer(poiLayerGroup); btn.textContent = '🏪 POI OFF'; }
+            const filterContainer = document.querySelector('.poi-filter-container');
+            
+            if (poiVisible) {
+                btn.textContent = '🏪 POI ON';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+                if (poiLayerGroup) poiLayerGroup.addTo(map);
+                if (filterContainer) filterContainer.style.display = 'flex';
+                applyPOISearchFilter();
+            } else {
+                btn.textContent = '🏪 POI OFF';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+                if (poiLayerGroup) map.removeLayer(poiLayerGroup);
+                if (filterContainer) filterContainer.style.display = 'none';
             }
         }
 
@@ -681,7 +693,11 @@ out center;`;
                     count++;
                 });
 
-                poiLayerGroup.addTo(map);
+                if (poiVisible) {
+                    poiLayerGroup.addTo(map);
+                    const filterContainer = document.querySelector('.poi-filter-container');
+                    if (filterContainer) filterContainer.style.display = 'flex';
+                }
                 statusEl.textContent = `🏪 ${count} POI`;
 
             } catch (err) {
