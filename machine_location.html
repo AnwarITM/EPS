@@ -652,6 +652,54 @@
                 })
                 .catch(e => console.error('Gagal memuat batas wilayah presisi:', e));
 
+            // Load Surabaya Grids (Barat, Timur, dll)
+            fetch('../data/surabaya-grids.json')
+                .then(res => res.json())
+                .then(data => {
+                    const gridColors = {
+                        'Surabaya Pusat': '#ffb703',
+                        'Surabaya Utara': '#00b4d8',
+                        'Surabaya Timur': '#219ebc',
+                        'Surabaya Selatan': '#fb8500',
+                        'Surabaya Barat': '#e63946'
+                    };
+                    const gridLayer = L.geoJSON(data, {
+                        style: function (feature) {
+                            const zone = feature.properties.zona;
+                            return {
+                                fillColor: gridColors[zone] || '#fff',
+                                fillOpacity: 0.05,
+                                color: gridColors[zone] || '#fff',
+                                weight: 1.5,
+                                opacity: 0.8,
+                                dashArray: '5, 5', // Dashed border for zones
+                                className: 'modern-polygon'
+                            };
+                        },
+                        onEachFeature: function (feature, layer) {
+                            layer.on({
+                                mouseover: function (e) {
+                                    const l = e.target;
+                                    l.setStyle({
+                                        fillOpacity: 0.25,
+                                        weight: 3,
+                                        opacity: 1
+                                    });
+                                    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                                        l.bringToFront();
+                                    }
+                                    regionTooltip.update({ name: feature.properties.zona + '<br><span style="font-size:10px;font-weight:normal;color:#aaa">Kec. ' + feature.properties.kecamatan + '</span>' });
+                                },
+                                mouseout: function (e) {
+                                    gridLayer.resetStyle(e.target);
+                                    regionTooltip.update();
+                                }
+                            });
+                        }
+                    }).addTo(map);
+                })
+                .catch(e => console.error('Gagal memuat grid Surabaya:', e));
+
             // Enable clicking anywhere on the empty map to add a machine
             map.on('click', function(e) {
                 // Guard: Bounding Box Surabaya - Madura

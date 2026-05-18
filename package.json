@@ -3,5 +3,8 @@
   "private": true,
   "scripts": {
     "build": "node ./scripts/update-cache-version.js"
+  },
+  "dependencies": {
+    "osmtogeojson": "^3.0.0-beta.5"
   }
 }
