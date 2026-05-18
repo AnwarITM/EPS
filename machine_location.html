@@ -652,6 +652,27 @@
                 })
                 .catch(e => console.error('Gagal memuat batas wilayah presisi:', e));
 
+            // Enable clicking anywhere on the empty map to add a machine
+            map.on('click', function(e) {
+                // Guard: Bounding Box Surabaya - Madura
+                const sbyMaduraBounds = L.latLngBounds(
+                    L.latLng(-7.45, 112.50), // Southwest
+                    L.latLng(-6.80, 114.15)  // Northeast
+                );
+
+                if (!sbyMaduraBounds.contains(e.latlng)) {
+                    alert("⚠️ Area di luar batas operasional. Harap pilih lokasi di sekitar Surabaya atau Madura.");
+                    return;
+                }
+
+                pendingLatLng = e.latlng;
+                document.getElementById('coordDisplay').textContent =
+                    `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
+                document.getElementById('machineNameInput').value = '';
+                document.getElementById('machineCategoryInput').value = 'BCA'; // Default
+                openAddModal();
+            });
+
             loadMachinesFromFirebase();
             loadPOILayer();
         }
