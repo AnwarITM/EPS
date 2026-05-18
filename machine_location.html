@@ -500,6 +500,41 @@
             });
         }
 
+        // Surabaya & Madura Connected Boundary Polygon
+        const surabayaMaduraCoords = [
+            [-7.35, 112.58], // Southwest Surabaya (Lakarsantri/Gresik border)
+            [-7.20, 112.58], // West Surabaya (Benowo)
+            [-7.15, 112.66], // Northwest Surabaya (Asemrowo coast)
+            [-7.05, 112.66], // Crossing to Bangkalan West Coast
+            [-6.88, 112.70], // Northwest Bangkalan (Klampis)
+            [-6.85, 112.90], // North Bangkalan (Sepulu)
+            [-6.85, 113.25], // North Sampang (Ketapang)
+            [-6.85, 113.55], // North Pamekasan
+            [-6.83, 113.85], // North Sumenep (Dungkek)
+            [-6.95, 114.08], // Northeast Cape of Sumenep
+            [-7.08, 114.08], // East Sumenep
+            [-7.24, 113.85], // South Sumenep / Pamekasan coast
+            [-7.22, 113.50], // South Pamekasan coast (Tlanakan)
+            [-7.24, 113.25], // South Sampang coast
+            [-7.20, 112.85], // South Bangkalan coast (Labang)
+            [-7.32, 112.83], // East Surabaya (Gunung Anyar / Rungkut coast)
+            [-7.36, 112.78], // Southeast Surabaya (Waru border)
+            [-7.36, 112.68]  // South Surabaya (Karang Pilang border)
+        ];
+
+        function isPointInPolygon(point, vs) {
+            const x = point.lat, y = point.lng;
+            let inside = false;
+            for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+                const xi = vs[i][0], yi = vs[i][1];
+                const xj = vs[j][0], yj = vs[j][1];
+                const intersect = ((yi > y) !== (yj > y))
+                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
         // === Map State ===
         let map;
         let markersMap = {}; // { key: { marker, item } }
@@ -508,20 +543,49 @@
         let activePoiFilter = 'all';
 
         function initMap() {
+            // Indonesia Bounds for max zoom out limit
             const bounds = L.latLngBounds(
-                L.latLng(-7.42, 112.55),
-                L.latLng(-6.82, 113.95)
+                L.latLng(-12.0, 94.0),
+                L.latLng(7.0, 142.0)
             );
             map = L.map('map', {
                 center: [-7.12, 113.0],
-                zoom: 11, minZoom: 11, maxZoom: 19,
+                zoom: 11, minZoom: 4, maxZoom: 19,
                 maxBounds: bounds, maxBoundsViscosity: 1.0
             });
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19, attribution: '© OpenStreetMap'
             }).addTo(map);
 
+            // Dark mask over the rest of the world (with Surabaya-Madura as a clear hole)
+            const worldOuter = [
+                [90, -180],
+                [90, 180],
+                [-90, 180],
+                [-90, -180]
+            ];
+            
+            // Mask layer (Deep premium dark color)
+            L.polygon([worldOuter, surabayaMaduraCoords], {
+                fillColor: '#090d16',
+                fillOpacity: 0.85,
+                color: 'none',
+                interactive: false
+            }).addTo(map);
+
+            // Neon glowing stroke boundary for Surabaya & Madura
+            L.polygon(surabayaMaduraCoords, {
+                color: '#3b82f6',
+                weight: 2,
+                fillColor: 'transparent',
+                interactive: false
+            }).addTo(map);
+
             map.on('click', function(e) {
+                // Prevent tapping outside of active region
+                if (!isPointInPolygon(e.latlng, surabayaMaduraCoords)) {
+                    return;
+                }
                 pendingLatLng = e.latlng;
                 document.getElementById('coordDisplay').textContent =
                     `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
