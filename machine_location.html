@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lokasi Mesin • EPS</title>
+
+    <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
+
+    <link rel="stylesheet" href="design-tokens.css?v=20260110">
+    <link rel="stylesheet" href="styles.css?v=20260110">
+    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=20260110">
+
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <style>
+        .app-header {
+            padding: var(--space-4) 0;
+            margin-bottom: var(--space-4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--surface-border);
+        }
+        .app-title {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            color: var(--primary-color);
+            letter-spacing: -0.02em;
+        }
+        #map {
+            height: calc(100vh - 260px);
+            min-height: 350px;
+            width: 100%;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--space-6);
+            z-index: 1;
+        }
+        .info-bar {
+            background: var(--surface-1);
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--space-4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: var(--font-size-sm);
+        }
+        .info-bar .count { font-weight: 700; color: var(--primary-color); }
+        .info-bar .hint { color: var(--text-secondary); }
+
+        /* Add Machine Modal */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center; justify-content: center;
+            z-index: 1000;
+            padding: var(--space-4);
+        }
+        .modal-content {
+            background: var(--bg-color);
+            border-radius: var(--radius-xl);
+            padding: var(--space-6);
+            width: 100%; max-width: 400px;
+            box-shadow: var(--shadow-lg);
+        }
+        .modal-content h3 { margin: 0 0 var(--space-4) 0; }
+        .metric-label {
+            font-size: 10px; color: var(--text-secondary);
+            text-transform: uppercase; font-weight: 700;
+            letter-spacing: 0.05em; margin-bottom: 4px;
+        }
+        .cell-edit {
+            width: 100%; padding: 10px 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--surface-border);
+            background: var(--surface-2);
+            color: var(--text-primary);
+            font-family: inherit; font-size: 14px;
+        }
+        .cell-edit:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-focus);
+        }
+        .coord-display {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            background: var(--surface-2);
+            padding: 6px 10px;
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--space-4);
+            font-family: monospace;
+        }
+
+        /* Theme Grid */
+        .theme-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3);
+        }
+        .theme-option {
+            background: var(--surface-2); border: 1px solid var(--surface-border);
+            border-radius: var(--radius-md); padding: var(--space-3);
+            display: flex; align-items: center; gap: var(--space-3);
+            cursor: pointer; transition: var(--transition-base);
+        }
+        .theme-option:hover { background: var(--surface-3); transform: translateY(-2px); }
+        .theme-preview {
+            width: 24px; height: 24px; border-radius: 50%;
+            border: 2px solid #fff; box-shadow: 0 0 0 1px var(--surface-border);
+        }
+
+        /* Popup delete button */
+        .popup-delete-btn {
+            display: inline-block; margin-top: 8px;
+            padding: 4px 12px; font-size: 11px; font-weight: 700;
+            background: #ef4444; color: #fff; border: none;
+            border-radius: 6px; cursor: pointer;
+        }
+        .popup-delete-btn:hover { background: #dc2626; }
+
+        /* Loading state */
+        .loading-overlay {
+            position: absolute; inset: 0; z-index: 2;
+            background: var(--surface-1);
+            display: flex; align-items: center; justify-content: center;
+            border-radius: var(--radius-lg);
+            font-size: var(--font-size-sm); color: var(--text-secondary);
+        }
+
+        /* Custom pin marker */
+        .map-pin {
+            width: 28px; height: 28px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid rgba(0,0,0,0.25);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .map-pin-wrap { width: 28px; height: 28px; }
+
+        /* Map Legend */
+        .map-legend {
+            background: var(--bg-color, #fff);
+            border-radius: 8px; padding: 8px 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-size: 11px; font-family: inherit;
+            min-width: 130px;
+        }
+        .map-legend b { display: block; margin-bottom: 5px; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #888; }
+        .legend-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.2); }
+
+        /* Search bar styles */
+        .search-container {
+            margin-bottom: var(--space-4);
+            position: relative;
+            z-index: 2;
+        }
+        .search-input {
+            width: 100%;
+            padding: 10px 16px 10px 38px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--surface-border);
+            background: var(--surface-1);
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: var(--font-size-sm);
+            transition: var(--transition-base);
+            box-shadow: var(--shadow-sm);
+        }
+        .search-input:focus {
+            outline: none;
+            background: var(--bg-color);
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-focus);
+        }
+        .search-icon-wrapper {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+        }
+
+        /* POI Filter Chips */
+        .poi-filter-container {
+            display: flex;
+            gap: var(--space-2);
+            overflow-x: auto;
+            padding-bottom: var(--space-2);
+            margin-bottom: var(--space-4);
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            z-index: 2;
+            position: relative;
+        }
+        .poi-filter-container::-webkit-scrollbar {
+            display: none;
+        }
+        .poi-chip {
+            padding: 8px 14px;
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            background: var(--surface-2);
+            color: var(--text-secondary);
+            border: 1px solid var(--surface-border);
+            transition: var(--transition-base);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1;
+        }
+        .poi-chip:hover {
+            background: var(--surface-3);
+            transform: translateY(-1px);
+        }
+        .poi-chip.active {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* POI circle markers */
+        .poi-popup-btn {
+            display: inline-block; margin-top: 6px;
+            padding: 4px 10px; font-size: 11px; font-weight: 700;
+            background: var(--primary-color, #0070f3); color: #fff;
+            border: none; border-radius: 6px; cursor: pointer; width: 100%;
+        }
+        .poi-popup-btn:hover { opacity: 0.85; }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="app-shell">
+            <header class="app-header">
+                <div class="app-title">Lokasi Mesin</div>
+                <div style="display: flex; gap: var(--space-2);">
+                    <button id="poiToggleBtn" class="btn btn-secondary btn-compact" onclick="togglePOI()" title="Tampilkan/Sembunyikan lokasi BCA & Minimarket">🏪 POI ON</button>
+                    <button class="btn btn-secondary btn-compact" onclick="clearAllMachines()">Clear All</button>
+                </div>
+            </header>
+
+            <div class="info-bar">
+                <span class="hint">📍 Tap peta untuk tambah mesin</span>
+                <span style="display:flex;gap:8px;align-items:center;">
+                    <span id="poiStatus" style="font-size:10px;color:var(--text-secondary);"></span>
+                    <span>Total: <span class="count" id="machineCount">0</span></span>
+                </span>
+            </div>
+
+            <div class="search-container">
+                <div class="search-icon-wrapper">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </div>
+                <input type="text" id="mapSearchInput" class="search-input" placeholder="Cari mesin atau WSID..." oninput="handleSearch(this.value)">
+            </div>
+
+            <div class="poi-filter-container">
+                <div class="poi-chip active" data-cat="all" onclick="setPoiFilter('all')">🌐 Semua POI</div>
+                <div class="poi-chip" data-cat="BCA" onclick="setPoiFilter('BCA')">🏦 BCA</div>
+                <div class="poi-chip" data-cat="Indomaret" onclick="setPoiFilter('Indomaret')">🏪 Indomaret</div>
+                <div class="poi-chip" data-cat="Alfamart" onclick="setPoiFilter('Alfamart')">🏪 Alfamart</div>
+                <div class="poi-chip" data-cat="Superindo" onclick="setPoiFilter('Superindo')">🛒 Superindo</div>
+                <div class="poi-chip" data-cat="Giant" onclick="setPoiFilter('Giant')">🛒 Giant</div>
+            </div>
+
+            <div style="position: relative;">
+                <div id="map"></div>
+                <div class="loading-overlay" id="mapLoading">⏳ Memuat data dari server...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Machine Modal -->
+    <div id="addModal" class="modal-overlay" onclick="if(event.target===this)closeAddModal()">
+        <div class="modal-content">
+            <h3>📍 Tambah Mesin</h3>
+            <div class="coord-display" id="coordDisplay">Lat: -, Lng: -</div>
+            <div style="margin-bottom: var(--space-4);">
+                <div class="metric-label">Kategori</div>
+                <select id="machineCategoryInput" class="cell-edit">
+                    <option value="BCA">🏦 BCA</option>
+                    <option value="Indomaret">🏪 Indomaret</option>
+                    <option value="Alfamart">🏪 Alfamart</option>
+                    <option value="Giant">🛒 Giant</option>
+                    <option value="Superindo">🛒 Superindo</option>
+                    <option value="Lainnya">📦 Lainnya</option>
+                </select>
+            </div>
+            <div style="margin-bottom: var(--space-4);">
+                <div class="metric-label">Nama Mesin / WSID</div>
+                <input type="text" id="machineNameInput" class="cell-edit" placeholder="Contoh: ATM-1234" onkeypress="if(event.key==='Enter')confirmAddMachine()">
+            </div>
+            <div style="display: flex; gap: var(--space-3);">
+                <button class="btn btn-secondary" style="flex:1;" onclick="closeAddModal()">Batal</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="confirmAddMachine()">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Modal -->
+    <div id="themeModal" class="modal-overlay" onclick="if(event.target===this)closeThemeModal()">
+        <div class="modal-content">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-6);">
+                <h3 style="margin:0;">Pilih Tema</h3>
+                <button class="btn btn-secondary btn-compact" onclick="closeThemeModal()">✕</button>
+            </div>
+            <div class="theme-grid">
+                <div class="theme-option" onclick="selectTheme('default')"><div class="theme-preview" style="background:#FF0036;"></div><span>Default</span></div>
+                <div class="theme-option" onclick="selectTheme('linear')"><div class="theme-preview" style="background:#5e6ad2;"></div><span>Linear</span></div>
+                <div class="theme-option" onclick="selectTheme('vercel')"><div class="theme-preview" style="background:#000;"></div><span>Vercel</span></div>
+                <div class="theme-option" onclick="selectTheme('apple')"><div class="theme-preview" style="background:#0066cc;"></div><span>Apple</span></div>
+                <div class="theme-option" onclick="selectTheme('supabase')"><div class="theme-preview" style="background:#3ecf8e;"></div><span>Supabase</span></div>
+                <div class="theme-option" onclick="selectTheme('liquid-glass')"><div class="theme-preview" style="background:linear-gradient(135deg,#0f172a,#4c1d95);border:1px solid rgba(255,255,255,0.4);"></div><span>Liquid Glass</span></div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-link">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span>
+            <span>Home</span>
+        </a>
+        <a href="work_planner.html" class="nav-link">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4.5h6"></path><path d="M8 10h8"></path><path d="M8 14h8"></path><path d="M8 18h5"></path></svg></span>
+            <span>Planner</span>
+        </a>
+        <a href="notes_viewer.html" class="nav-link">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1Z"></path><path d="M8 8h7"></path><path d="M8 12h7"></path><path d="M7 20V6"></path></svg></span>
+            <span>Notes</span>
+        </a>
+        <a href="machine_location.html" class="nav-link active">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span>
+            <span>Lokasi</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" onclick="openThemeModal()">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"></path><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.98 2.98l-.04-.04A1.8 1.8 0 0 0 14.8 19a1.8 1.8 0 0 0-1.08 1.65V21a2.1 2.1 0 0 1-4.2 0v-.06A1.8 1.8 0 0 0 8.4 19a1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.98-2.98l.04-.04A1.8 1.8 0 0 0 5 15.2a1.8 1.8 0 0 0-1.65-1.08H3a2.1 2.1 0 0 1 0-4.2h.06A1.8 1.8 0 0 0 5 8.8a1.8 1.8 0 0 0-.36-1.98L4.6 6.78A2.1 2.1 0 1 1 7.58 3.8l.04.04A1.8 1.8 0 0 0 9.6 5a1.8 1.8 0 0 0 1.08-1.65V3a2.1 2.1 0 0 1 4.2 0v.06A1.8 1.8 0 0 0 16 5a1.8 1.8 0 0 0 1.98-.36l.04-.04A2.1 2.1 0 1 1 21 7.58l-.04.04A1.8 1.8 0 0 0 19 9.6a1.8 1.8 0 0 0 1.65 1.08H21a2.1 2.1 0 0 1 0 4.2h-.06A1.8 1.8 0 0 0 19.4 15Z"></path></svg></span>
+            <span>Settings</span>
+        </a>
+    </nav>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="theme_manager.js?v=20260110"></script>
+
+    <script>
+        // === Theme ===
+        function openThemeModal() { document.getElementById('themeModal').style.display = 'flex'; }
+        function closeThemeModal() { document.getElementById('themeModal').style.display = 'none'; }
+        function selectTheme(id) { setGlobalTheme(id); closeThemeModal(); }
+
+        // === Firebase ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyAqqwSS1KTnAjfGcqvV_-TRHMYXJlTjtlI",
+            authDomain: "catatan-troubleshoot-atm-2b5a4.firebaseapp.com",
+            databaseURL: "https://catatan-troubleshoot-atm-2b5a4-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "catatan-troubleshoot-atm-2b5a4",
+            storageBucket: "catatan-troubleshoot-atm-2b5a4.firebasestorage.app",
+            messagingSenderId: "441198643571",
+            appId: "1:441198643571:web:7ee3c056d933acb3515d06"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const machinesRef = db.ref('machine_locations');
+
+        // === Category Config ===
+        const CATEGORIES = {
+            'BCA':       { color: '#0051a8', emoji: '🏦' },
+            'Indomaret':  { color: '#e63946', emoji: '🏪' },
+            'Alfamart':   { color: '#e76f00', emoji: '🏪' },
+            'Giant':      { color: '#2a9d4e', emoji: '🛒' },
+            'Superindo':  { color: '#8338ec', emoji: '🛒' },
+            'Lainnya':    { color: '#888888', emoji: '📦' },
+        };
+
+        function getCatColor(cat) { return (CATEGORIES[cat] || CATEGORIES['Lainnya']).color; }
+        function getCatEmoji(cat) { return (CATEGORIES[cat] || CATEGORIES['Lainnya']).emoji; }
+
+        function createPinIcon(cat) {
+            const color = getCatColor(cat);
+            return L.divIcon({
+                className: '',
+                html: `<div style="width:28px;height:28px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid rgba(0,0,0,0.25);box-shadow:0 2px 6px rgba(0,0,0,0.35);"></div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 28],
+                popupAnchor: [0, -30]
+            });
+        }
+
+        // === Map State ===
+        let map;
+        let markersMap = {}; // { key: { marker, item } }
+        let pendingLatLng = null;
+        let searchQuery = '';
+        let activePoiFilter = 'all';
+
+        function initMap() {
+            const bounds = L.latLngBounds(
+                L.latLng(-7.42, 112.55),
+                L.latLng(-6.82, 113.95)
+            );
+            map = L.map('map', {
+                center: [-7.12, 113.0],
+                zoom: 11, minZoom: 11, maxZoom: 19,
+                maxBounds: bounds, maxBoundsViscosity: 1.0
+            });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19, attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            map.on('click', function(e) {
+                pendingLatLng = e.latlng;
+                document.getElementById('coordDisplay').textContent =
+                    `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
+                document.getElementById('machineNameInput').value = '';
+                document.getElementById('machineCategoryInput').value = 'BCA'; // Default ke BCA saat tap peta kosong
+                openAddModal();
+            });
+
+            loadMachinesFromFirebase();
+            loadPOILayer();
+        }
+
+        // === POI Layer (Overpass API) ===
+        let poiLayerGroup = null;
+        let poiVisible = true;
+        let poiCirclesByCategory = {}; // { cat: [circleMarker, ...] }
+
+        // Map OSM name → our category key
+        const POI_NAME_MAP = [
+            { pattern: /BCA/i,       cat: 'BCA' },
+            { pattern: /Indomaret/i, cat: 'Indomaret' },
+            { pattern: /Alfamart/i,  cat: 'Alfamart' },
+            { pattern: /Giant/i,     cat: 'Giant' },
+            { pattern: /Superindo/i, cat: 'Superindo' },
+        ];
+
+        function matchPOICat(name) {
+            for (const { pattern, cat } of POI_NAME_MAP) {
+                if (pattern.test(name)) return cat;
+            }
+            return null;
+        }
+
+        function togglePOI() {
+            poiVisible = !poiVisible;
+            const btn = document.getElementById('poiToggleBtn');
+            if (poiLayerGroup) {
+                if (poiVisible) { poiLayerGroup.addTo(map); btn.textContent = '🏪 POI ON'; applyPOISearchFilter(); }
+                else { map.removeLayer(poiLayerGroup); btn.textContent = '🏪 POI OFF'; }
+            }
+        }
+
+        function setPoiFilter(cat) {
+            activePoiFilter = cat;
+            document.querySelectorAll('.poi-chip').forEach(chip => {
+                if (chip.dataset.cat === cat) {
+                    chip.classList.add('active');
+                } else {
+                    chip.classList.remove('active');
+                }
+            });
+            applyPOISearchFilter();
+        }
+
+        function applyPOISearchFilter() {
+            if (!poiLayerGroup || !poiVisible) return;
+            Object.entries(poiCirclesByCategory).forEach(([cat, circles]) => {
+                circles.forEach(c => {
+                    const matchesCategory = activePoiFilter === 'all' || cat === activePoiFilter;
+                    const matchesSearch = searchQuery === '' || (c.poiName && c.poiName.toLowerCase().includes(searchQuery)) || (c.poiCat && c.poiCat.toLowerCase().includes(searchQuery));
+                    
+                    if (matchesCategory && matchesSearch) {
+                        if (searchQuery !== '' && ((c.poiName && c.poiName.toLowerCase().includes(searchQuery)) || (c.poiCat && c.poiCat.toLowerCase().includes(searchQuery)))) {
+                            c.setRadius(18);
+                        } else {
+                            c.setRadius(10);
+                        }
+                        if (!poiLayerGroup.hasLayer(c)) poiLayerGroup.addLayer(c);
+                    } else {
+                        if (poiLayerGroup.hasLayer(c)) poiLayerGroup.removeLayer(c);
+                    }
+                });
+            });
+        }
+
+        async function loadPOILayer() {
+            const statusEl = document.getElementById('poiStatus');
+            statusEl.textContent = '⏳ Memuat POI...';
+
+            // Bounding box: Surabaya–Madura
+            const bbox = '-7.42,112.55,-6.82,113.95';
+            const query = `[out:json][timeout:30];
+(
+  node["amenity"="bank"]["name"~"BCA",i](${bbox});
+  way["amenity"="bank"]["name"~"BCA",i](${bbox});
+  node["shop"~"convenience|supermarket"]["name"~"Indomaret|Alfamart|Giant|Superindo",i](${bbox});
+  way["shop"~"convenience|supermarket"]["name"~"Indomaret|Alfamart|Giant|Superindo",i](${bbox});
+);
+out center;`;
+
+            try {
+                const res = await fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    body: query
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+
+                poiLayerGroup = L.layerGroup();
+                poiCirclesByCategory = {};
+                let count = 0;
+
+                data.elements.forEach(el => {
+                    const name = el.tags && el.tags.name;
+                    if (!name) return;
+                    const cat = matchPOICat(name);
+                    if (!cat) return;
+
+                    // nodes have lat/lon directly; ways have center
+                    const lat = el.lat ?? el.center?.lat;
+                    const lng = el.lon ?? el.center?.lon;
+                    if (!lat || !lng) return;
+
+                    const color = getCatColor(cat);
+                    const circle = L.circleMarker([lat, lng], {
+                        radius: 10,
+                        fillColor: color,
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.85
+                    });
+                    
+                    circle.poiName = name;
+                    circle.poiCat = cat;
+
+                    // Store by category for filter resize
+                    if (!poiCirclesByCategory[cat]) poiCirclesByCategory[cat] = [];
+                    poiCirclesByCategory[cat].push(circle);
+
+                    // Popup with shortcut button
+                    const popup = document.createElement('div');
+                    popup.style.minWidth = '140px';
+                    popup.innerHTML = `
+                        <div style="margin-bottom:3px;">
+                            <span style="background:${color};color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;">${getCatEmoji(cat)} ${escapeHtml(cat)}</span>
+                        </div>
+                        <b style="font-size:12px;">${escapeHtml(name)}</b><br>
+                        <span style="font-size:10px;color:#888;">Referensi OSM</span>
+                    `;
+                    const btn = document.createElement('button');
+                    btn.className = 'poi-popup-btn';
+                    btn.textContent = '📍 Pasang Mesin di Sini';
+                    btn.onclick = () => {
+                        pendingLatLng = L.latLng(lat, lng);
+                        document.getElementById('coordDisplay').textContent =
+                            `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+                        document.getElementById('machineNameInput').value = name; // Isi otomatis nama POI bank/minimarket
+                        document.getElementById('machineCategoryInput').value = cat;
+                        circle.closePopup();
+                        openAddModal();
+                    };
+                    popup.appendChild(btn);
+                    circle.bindPopup(popup);
+                    poiLayerGroup.addLayer(circle);
+                    count++;
+                });
+
+                poiLayerGroup.addTo(map);
+                statusEl.textContent = `🏪 ${count} POI`;
+
+            } catch (err) {
+                console.error('POI load failed:', err);
+                statusEl.textContent = '⚠️ POI gagal dimuat';
+            }
+        }
+
+        // === Filter ===
+        function handleSearch(val) {
+            searchQuery = val.trim().toLowerCase();
+            applySearchFilter();
+        }
+
+        function applySearchFilter() {
+            let visibleCount = 0;
+            Object.values(markersMap).forEach(({ marker, item }) => {
+                const nameMatch = item.name && item.name.toLowerCase().includes(searchQuery);
+                const catMatch = item.category && item.category.toLowerCase().includes(searchQuery);
+                
+                if (searchQuery === '' || nameMatch || catMatch) {
+                    if (!map.hasLayer(marker)) marker.addTo(map);
+                    visibleCount++;
+                } else {
+                    if (map.hasLayer(marker)) map.removeLayer(marker);
+                }
+            });
+
+            const countEl = document.getElementById('machineCount');
+            if (searchQuery !== '') {
+                countEl.textContent = `${visibleCount}/${Object.keys(markersMap).length}`;
+            } else {
+                countEl.textContent = Object.keys(markersMap).length;
+            }
+
+            applyPOISearchFilter();
+        }
+
+        // === Modal ===
+        function openAddModal() {
+            document.getElementById('addModal').style.display = 'flex';
+            setTimeout(() => document.getElementById('machineNameInput').focus(), 100);
+        }
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+            pendingLatLng = null;
+        }
+        function confirmAddMachine() {
+            if (!pendingLatLng) return;
+            const name = document.getElementById('machineNameInput').value.trim();
+            const category = document.getElementById('machineCategoryInput').value;
+            if (!name) {
+                const inp = document.getElementById('machineNameInput');
+                inp.style.borderColor = '#ef4444'; inp.placeholder = 'Nama wajib diisi!';
+                return;
+            }
+            machinesRef.push({ name, category, lat: pendingLatLng.lat, lng: pendingLatLng.lng, createdAt: Date.now() })
+                .then(() => closeAddModal())
+                .catch(err => alert('Gagal menyimpan: ' + err.message));
+        }
+
+        // === Firebase ===
+        function loadMachinesFromFirebase() {
+            machinesRef.on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                Object.values(markersMap).forEach(({ marker }) => map.removeLayer(marker));
+                markersMap = {};
+                Object.entries(data).forEach(([key, item]) => addMarkerToMap(key, item));
+                document.getElementById('machineCount').textContent = Object.keys(data).length;
+                document.getElementById('mapLoading').style.display = 'none';
+                applySearchFilter();
+            });
+        }
+
+        function addMarkerToMap(key, item) {
+            const cat = item.category || 'Lainnya';
+            const marker = L.marker([item.lat, item.lng], { icon: createPinIcon(cat) }).addTo(map);
+            const popupContent = document.createElement('div');
+            popupContent.innerHTML = `
+                <div style="font-size:12px;margin-bottom:2px;">
+                    <span style="background:${getCatColor(cat)};color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;">${getCatEmoji(cat)} ${escapeHtml(cat)}</span>
+                </div>
+                <b style="font-size:13px;">${escapeHtml(item.name)}</b><br>
+                <span style="font-size:10px;color:#888;">Lat: ${item.lat.toFixed(5)}, Lng: ${item.lng.toFixed(5)}</span>
+            `;
+            const delBtn = document.createElement('button');
+            delBtn.className = 'popup-delete-btn';
+            delBtn.textContent = '🗑 Hapus';
+            delBtn.onclick = () => deleteMachine(key);
+            popupContent.appendChild(delBtn);
+            marker.bindPopup(popupContent);
+            markersMap[key] = { marker, item: { ...item, category: cat } };
+        }
+
+        function deleteMachine(key) {
+            if (confirm('Hapus lokasi mesin ini?')) {
+                machinesRef.child(key).remove().catch(err => alert('Gagal: ' + err.message));
+            }
+        }
+        function clearAllMachines() {
+            const count = Object.keys(markersMap).length;
+            if (count === 0) return alert('Tidak ada mesin.');
+            if (confirm(`Hapus semua ${count} lokasi mesin?`)) {
+                machinesRef.remove().catch(err => alert('Gagal: ' + err.message));
+            }
+        }
+        function escapeHtml(text) {
+            const d = document.createElement('div'); d.textContent = text; return d.innerHTML;
+        }
+
+        document.addEventListener('DOMContentLoaded', initMap);
+    </script>
+</body>
+
+</html>

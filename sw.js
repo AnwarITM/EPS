@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v20260505';
+const CACHE_VERSION = 'v20260518';
 const CACHE_NAME = `eps-work-planner-v${CACHE_VERSION}`;
 
 const v = (url) => `${url}?v=${CACHE_VERSION}`;
@@ -8,7 +8,7 @@ const urlsToCache = [
   v('./index.html'),
   v('./work_planner.html'),
   v('./notes_viewer.html'),
-  v('./cek_lembur/index.html'),
+  v('./machine_location.html'),
   v('./styles.css'),
   v('./design-tokens.css'),
   v('./theme-light.css'),
@@ -19,8 +19,7 @@ const urlsToCache = [
   './icon-192x192.png',
   './icon-512x512.png',
   v('./work_planner.js'),
-  v('./theme_manager.js'),
-  './cek_lembur/'
+  v('./theme_manager.js')
 ];
 
 self.addEventListener('install', (event) => {

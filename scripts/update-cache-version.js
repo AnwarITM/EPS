@@ -12,7 +12,7 @@ const cacheVersionPattern = /const CACHE_VERSION = 'v\d{8}';/;
 const originalContent = fs.readFileSync(targetFile, 'utf8').replace(/^\uFEFF/, '');
 const filesToUpdate = [
   { file: path.join(__dirname, '..', 'index.html'), pattern: /serviceWorker\.register\(['"]\.\/sw\.js(?:\?v=?v?\d{8})?['"]\)/, makeReplacement: () => `serviceWorker.register('./sw.js?v=${queryVersion}')` },
-  { file: path.join(__dirname, '..', 'cek_lembur', 'index.html'), pattern: /serviceWorker\.register\(['"]\.\.\/sw\.js(?:\?v=?v?\d{8})?['"]\)/, makeReplacement: () => `serviceWorker.register('../sw.js?v=${queryVersion}')` },
+  { file: path.join(__dirname, '..', 'machine_location.html'), pattern: /serviceWorker\.register\(['"]\.\/sw\.js(?:\?v=?v?\d{8})?['"]\)/, makeReplacement: () => `serviceWorker.register('./sw.js?v=${queryVersion}')` },
   { file: path.join(__dirname, '..', 'work_planner.html'), pattern: /serviceWorker\.register\(['"]\.\/sw\.js(?:\?v=?v?\d{8})?['"]\)/, makeReplacement: () => `serviceWorker.register('./sw.js?v=${queryVersion}')` },
   { file: path.join(__dirname, '..', 'notes_viewer.html'), pattern: /serviceWorker\.register\(['"]\.\/sw\.js(?:\?v=?v?\d{8})?['"]\)/, makeReplacement: () => `serviceWorker.register('./sw.js?v=${queryVersion}')` },
 ];
