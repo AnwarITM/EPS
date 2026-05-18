@@ -17,6 +17,11 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
+    <!-- Leaflet MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
     <style>
         /* Force full screen height and prevent page scroll */
         html, body {
@@ -307,6 +312,52 @@
             border: none; border-radius: 6px; cursor: pointer; width: 100%;
         }
         .poi-popup-btn:hover { opacity: 0.85; }
+
+        /* Modern Glassmorphism Tooltip */
+        .glass-tooltip {
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            color: #fff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            min-width: 160px;
+            font-family: var(--font-family);
+        }
+        .tooltip-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #4da3ff;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .tooltip-stat {
+            font-size: 11px;
+            color: #a1a1aa;
+        }
+
+        /* Modern Polygon Transitions */
+        .modern-polygon {
+            transition: fill-opacity 0.2s ease, stroke-width 0.2s ease, stroke-opacity 0.2s ease;
+        }
+
+        /* Marker Cluster Customization */
+        .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
+            background-color: rgba(77, 163, 255, 0.6) !important;
+        }
+        .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
+            background-color: rgba(0, 112, 243, 0.9) !important;
+            color: white !important;
+            font-weight: bold;
+            font-family: var(--font-family);
+        }
     </style>
 </head>
 
@@ -428,19 +479,19 @@
     </div>
 
     <nav class="bottom-nav">
-        <a href="index.html" class="nav-link">
+        <a href="/" class="nav-link">
             <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span>
             <span>Home</span>
         </a>
-        <a href="work_planner.html" class="nav-link">
+        <a href="/work_planner" class="nav-link">
             <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4.5h6"></path><path d="M8 10h8"></path><path d="M8 14h8"></path><path d="M8 18h5"></path></svg></span>
             <span>Planner</span>
         </a>
-        <a href="notes_viewer.html" class="nav-link">
+        <a href="/notes_viewer" class="nav-link">
             <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1Z"></path><path d="M8 8h7"></path><path d="M8 12h7"></path><path d="M7 20V6"></path></svg></span>
             <span>Notes</span>
         </a>
-        <a href="machine_location.html" class="nav-link active">
+        <a href="/machine_location" class="nav-link active">
             <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span>
             <span>Lokasi</span>
         </a>
@@ -500,43 +551,9 @@
             });
         }
 
-        // Surabaya & Madura Connected Boundary Polygon
-        const surabayaMaduraCoords = [
-            [-7.35, 112.58], // Southwest Surabaya (Lakarsantri/Gresik border)
-            [-7.20, 112.58], // West Surabaya (Benowo)
-            [-7.15, 112.66], // Northwest Surabaya (Asemrowo coast)
-            [-7.05, 112.66], // Crossing to Bangkalan West Coast
-            [-6.88, 112.70], // Northwest Bangkalan (Klampis)
-            [-6.85, 112.90], // North Bangkalan (Sepulu)
-            [-6.85, 113.25], // North Sampang (Ketapang)
-            [-6.85, 113.55], // North Pamekasan
-            [-6.83, 113.85], // North Sumenep (Dungkek)
-            [-6.95, 114.08], // Northeast Cape of Sumenep
-            [-7.08, 114.08], // East Sumenep
-            [-7.24, 113.85], // South Sumenep / Pamekasan coast
-            [-7.22, 113.50], // South Pamekasan coast (Tlanakan)
-            [-7.24, 113.25], // South Sampang coast
-            [-7.20, 112.85], // South Bangkalan coast (Labang)
-            [-7.32, 112.83], // East Surabaya (Gunung Anyar / Rungkut coast)
-            [-7.36, 112.78], // Southeast Surabaya (Waru border)
-            [-7.36, 112.68]  // South Surabaya (Karang Pilang border)
-        ];
-
-        function isPointInPolygon(point, vs) {
-            const x = point.lat, y = point.lng;
-            let inside = false;
-            for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-                const xi = vs[i][0], yi = vs[i][1];
-                const xj = vs[j][0], yj = vs[j][1];
-                const intersect = ((yi > y) !== (yj > y))
-                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-                if (intersect) inside = !inside;
-            }
-            return inside;
-        }
-
         // === Map State ===
         let map;
+        let markerClusterGroup;
         let markersMap = {}; // { key: { marker, item } }
         let pendingLatLng = null;
         let searchQuery = '';
@@ -551,48 +568,110 @@
             map = L.map('map', {
                 center: [-7.12, 113.0],
                 zoom: 11, minZoom: 4, maxZoom: 19,
+                zoomAnimation: true, fadeAnimation: true,
                 maxBounds: bounds, maxBoundsViscosity: 1.0
             });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19, attribution: '© OpenStreetMap'
-            }).addTo(map);
-
-            // Dark mask over the rest of the world (with Surabaya-Madura as a clear hole)
-            const worldOuter = [
-                [90, -180],
-                [90, 180],
-                [-90, 180],
-                [-90, -180]
-            ];
             
-            // Mask layer (Deep premium dark color)
-            L.polygon([worldOuter, surabayaMaduraCoords], {
-                fillColor: '#090d16',
-                fillOpacity: 0.85,
-                color: 'none',
-                interactive: false
+            // Modern Dark Vector-like TileLayer (CartoDB Dark Matter)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19, attribution: '© OpenStreetMap, © CartoDB'
             }).addTo(map);
 
-            // Neon glowing stroke boundary for Surabaya & Madura
-            L.polygon(surabayaMaduraCoords, {
-                color: '#3b82f6',
-                weight: 2,
-                fillColor: 'transparent',
-                interactive: false
-            }).addTo(map);
-
-            map.on('click', function(e) {
-                // Prevent tapping outside of active region
-                if (!isPointInPolygon(e.latlng, surabayaMaduraCoords)) {
-                    return;
-                }
-                pendingLatLng = e.latlng;
-                document.getElementById('coordDisplay').textContent =
-                    `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
-                document.getElementById('machineNameInput').value = '';
-                document.getElementById('machineCategoryInput').value = 'BCA'; // Default ke BCA saat tap peta kosong
-                openAddModal();
+            // Setup Marker Clustering
+            markerClusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 40
             });
+            map.addLayer(markerClusterGroup);
+
+            // Setup Glassmorphism Tooltip Control
+            const regionTooltip = L.control({position: 'topright'});
+            regionTooltip.onAdd = function (map) {
+                this._div = L.DomUtil.create('div', 'glass-tooltip');
+                this.update();
+                return this._div;
+            };
+            regionTooltip.update = function (props) {
+                if (props) {
+                    this._div.innerHTML = `
+                        <div class="tooltip-title">${props.name || 'Wilayah'}</div>
+                        <div class="tooltip-stat">✨ Area Operasional Aktif</div>
+                    `;
+                    this._div.style.opacity = 1;
+                    this._div.style.transform = 'translateY(0)';
+                } else {
+                    this._div.style.opacity = 0;
+                    this._div.style.transform = 'translateY(10px)';
+                }
+            };
+            regionTooltip.addTo(map);
+
+            // Setup Modern Floating Legend
+            const legend = L.control({position: 'bottomright'});
+            legend.onAdd = function (map) {
+                const div = L.DomUtil.create('div', 'modern-legend');
+                div.innerHTML = `
+                    <b>Kepadatan Titik</b>
+                    <div class="legend-row"><div class="legend-dot" style="background:#4da3ff"></div> Rendah</div>
+                    <div class="legend-row"><div class="legend-dot" style="background:#2563eb"></div> Sedang</div>
+                    <div class="legend-row"><div class="legend-dot" style="background:#1e3a8a"></div> Tinggi</div>
+                `;
+                return div;
+            };
+            legend.addTo(map);
+
+            // Load precise GeoJSON boundary and render as interactive polygons
+            fetch('../data/surabaya-madura.json')
+                .then(res => res.json())
+                .then(data => {
+                    const geojsonLayer = L.geoJSON(data, {
+                        style: function (feature) {
+                            const name = feature.properties.name || '';
+                            let fillColor = '#4da3ff'; // Low
+                            if (name === 'Surabaya') fillColor = '#1e3a8a'; // High
+                            else if (name === 'Bangkalan') fillColor = '#2563eb'; // Medium
+                            
+                            return {
+                                fillColor: fillColor,
+                                fillOpacity: 0.25,
+                                color: '#4da3ff', // Tetap biru muda untuk outline border glow
+                                weight: 0.5,
+                                opacity: 0.4,
+                                className: 'modern-polygon'
+                            };
+                        },
+                        onEachFeature: function (feature, layer) {
+                            layer.on({
+                                mouseover: function (e) {
+                                    const l = e.target;
+                                    l.setStyle({
+                                        fillOpacity: 0.55,
+                                        weight: 2,
+                                        opacity: 1
+                                    });
+                                    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                                        l.bringToFront();
+                                    }
+                                    regionTooltip.update(layer.feature.properties);
+                                },
+                                mouseout: function (e) {
+                                    geojsonLayer.resetStyle(e.target);
+                                    regionTooltip.update();
+                                },
+                                click: function (e) {
+                                    // Triggered when user clicks on valid operations area
+                                    pendingLatLng = e.latlng;
+                                    document.getElementById('coordDisplay').textContent =
+                                        `Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`;
+                                    document.getElementById('machineNameInput').value = '';
+                                    document.getElementById('machineCategoryInput').value = 'BCA';
+                                    openAddModal();
+                                }
+                            });
+                        }
+                    }).addTo(map);
+                })
+                .catch(e => console.error('Gagal memuat batas wilayah presisi:', e));
 
             loadMachinesFromFirebase();
             loadPOILayer();
@@ -783,10 +862,10 @@ out center;`;
                 const catMatch = item.category && item.category.toLowerCase().includes(searchQuery);
                 
                 if (searchQuery === '' || nameMatch || catMatch) {
-                    if (!map.hasLayer(marker)) marker.addTo(map);
+                    if (!markerClusterGroup.hasLayer(marker)) markerClusterGroup.addLayer(marker);
                     visibleCount++;
                 } else {
-                    if (map.hasLayer(marker)) map.removeLayer(marker);
+                    if (markerClusterGroup.hasLayer(marker)) markerClusterGroup.removeLayer(marker);
                 }
             });
 
@@ -858,7 +937,7 @@ out center;`;
         function loadMachinesFromFirebase() {
             machinesRef.on('value', (snapshot) => {
                 const data = snapshot.val() || {};
-                Object.values(markersMap).forEach(({ marker }) => map.removeLayer(marker));
+                markerClusterGroup.clearLayers();
                 markersMap = {};
                 Object.entries(data).forEach(([key, item]) => addMarkerToMap(key, item));
                 document.getElementById('machineCount').textContent = Object.keys(data).length;
@@ -869,7 +948,7 @@ out center;`;
 
         function addMarkerToMap(key, item) {
             const cat = item.category || 'Lainnya';
-            const marker = L.marker([item.lat, item.lng], { icon: createPinIcon(cat) }).addTo(map);
+            const marker = L.marker([item.lat, item.lng], { icon: createPinIcon(cat) });
             const popupContent = document.createElement('div');
             popupContent.innerHTML = `
                 <div style="font-size:12px;margin-bottom:2px;">
@@ -902,6 +981,7 @@ out center;`;
             btnGroup.appendChild(delBtn);
             popupContent.appendChild(btnGroup);
             marker.bindPopup(popupContent);
+            markerClusterGroup.addLayer(marker);
             markersMap[key] = { marker, item: { ...item, category: cat } };
         }
 
