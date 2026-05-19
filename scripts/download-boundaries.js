@@ -1,12 +1,13 @@
 const fs = require('fs');
 const https = require('https');
+const path = require('path');
 
 const relations = {
-    'Surabaya': 171822,
-    'Bangkalan': 171813,
-    'Sampang': 171814,
-    'Pamekasan': 171815,
-    'Sumenep': 171816
+    'Surabaya': 8225862,
+    'Bangkalan': 9674056,
+    'Sampang': 9674057,
+    'Pamekasan': 9674058,
+    'Sumenep': 9674059
 };
 
 // We will use simplified polygons (params=0) to keep size small
@@ -52,7 +53,8 @@ async function main() {
         features: features
     };
     
-    fs.writeFileSync('../data/surabaya-madura.json', JSON.stringify(featureCollection));
+    const targetPath = path.join(__dirname, '..', 'data', 'surabaya-madura.json');
+    fs.writeFileSync(targetPath, JSON.stringify(featureCollection));
     console.log('Saved to data/surabaya-madura.json');
 }
 

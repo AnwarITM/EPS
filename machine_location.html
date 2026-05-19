@@ -659,7 +659,7 @@
             regionTooltip.addTo(map);
 
             // Load precise GeoJSON boundary and render as interactive polygons
-            fetch('../data/surabaya-madura.json')
+            fetch('data/surabaya-madura.json')
                 .then(res => res.json())
                 .then(data => {
                     const geojsonLayer = L.geoJSON(data, {
@@ -710,7 +710,7 @@
                 .catch(e => console.error('Gagal memuat batas wilayah presisi:', e));
 
             // Load Surabaya Grids (Barat, Timur, dll)
-            fetch('../data/surabaya-grids.json')
+            fetch('data/surabaya-grids.json')
                 .then(res => res.json())
                 .then(data => {
                     const gridColors = {

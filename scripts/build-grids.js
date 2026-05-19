@@ -1,5 +1,6 @@
 const fs = require('fs');
 const osmtogeojson = require('osmtogeojson');
+const path = require('path');
 
 const ZONES = {
   'Surabaya Pusat': ['Tegalsari', 'Simokerto', 'Genteng', 'Bubutan'],
@@ -59,7 +60,8 @@ fetch('https://overpass-api.de/api/interpreter', {
         features: kecamatanFeatures.filter(f => f.properties.zona !== 'Lainnya')
     };
 
-    fs.writeFileSync('../data/surabaya-grids.json', JSON.stringify(finalGeoJSON));
+    const targetPath = path.join(__dirname, '..', 'data', 'surabaya-grids.json');
+    fs.writeFileSync(targetPath, JSON.stringify(finalGeoJSON));
     console.log("Berhasil! Tersimpan di data/surabaya-grids.json");
 })
 .catch(err => console.error("Error:", err));
