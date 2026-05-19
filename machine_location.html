@@ -163,9 +163,11 @@
             display: flex;
             gap: 6px;
             margin-top: 8px;
+            flex-wrap: wrap;
         }
         .popup-delete-btn {
             flex: 1;
+            min-width: 92px;
             padding: 5px 10px;
             font-size: 11px;
             font-weight: 700;
@@ -182,6 +184,7 @@
         }
         .popup-edit-btn {
             flex: 1;
+            min-width: 92px;
             padding: 5px 10px;
             font-size: 11px;
             font-weight: 700;
@@ -195,6 +198,23 @@
         }
         .popup-edit-btn:hover {
             background: #bae6fd;
+        }
+        .popup-map-btn {
+            flex: 1;
+            min-width: 92px;
+            padding: 5px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #86efac;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: var(--transition-base);
+        }
+        .popup-map-btn:hover {
+            background: #bbf7d0;
         }
 
         /* Loading state */
@@ -1056,6 +1076,14 @@ out center;`;
                 openEditModal(key);
             };
 
+            const mapBtn = document.createElement('button');
+            mapBtn.className = 'popup-map-btn';
+            mapBtn.textContent = '🧭 Google Maps';
+            mapBtn.title = 'Arahkan ke lokasi ini di Google Maps';
+            mapBtn.onclick = () => {
+                openGoogleMapsDirection(item.lat, item.lng);
+            };
+
             const delBtn = document.createElement('button');
             delBtn.className = 'popup-delete-btn';
             delBtn.textContent = '🗑 Hapus';
@@ -1065,6 +1093,7 @@ out center;`;
             };
 
             btnGroup.appendChild(editBtn);
+            btnGroup.appendChild(mapBtn);
             btnGroup.appendChild(delBtn);
             popupContent.appendChild(btnGroup);
             marker.bindPopup(popupContent);
@@ -1083,6 +1112,11 @@ out center;`;
             if (await customConfirm(`Hapus semua ${count} lokasi mesin?`)) {
                 machinesRef.remove().catch(err => alert('Gagal: ' + err.message));
             }
+        }
+        function openGoogleMapsDirection(lat, lng) {
+            const query = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${query}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
         }
         function escapeHtml(text) {
             const d = document.createElement('div'); d.textContent = text; return d.innerHTML;
