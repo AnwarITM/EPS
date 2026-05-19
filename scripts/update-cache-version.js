@@ -1,33 +1,67 @@
 const fs = require('fs');
 const path = require('path');
 
-const targetFile = path.join(__dirname, '..', 'sw.js');
-
+const rootDir = path.join(__dirname, '..');
 const now = new Date();
-const dateStamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-const nextVersion = `v${dateStamp}`;
-const queryVersion = dateStamp;
+const version = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 
-const cacheVersionPattern = /const CACHE_VERSION = 'v\d{8}';/;
-const originalContent = fs.readFileSync(targetFile, 'utf8').replace(/^\uFEFF/, '');
 const filesToUpdate = [
-  { file: path.join(__dirname, '..', 'index.html'), pattern: /serviceWorker\.register\(['"]\.\/sw\.js(?:\?v=?v?\d{8})?['"]\)/, makeReplacement: () => `serviceWorker.register('./sw.js?v=${queryVersion}')` },
-  { file: path.join(__dirname, '..', 'machine_location.html'), pattern: /serviceWorker\.register\(['"]\.\/sw\.js(?:\?v=?v?\d{8})?['"]\)/, makeReplacement: () => `serviceWorker.register('./sw.js?v=${queryVersion}')` },
-  { file: path.join(__dirname, '..', 'work_planner.html'), pattern: /serviceWorker\.register\(['"]\.\/sw\.js(?:\?v=?v?\d{8})?['"]\)/, makeReplacement: () => `serviceWorker.register('./sw.js?v=${queryVersion}')` },
-  { file: path.join(__dirname, '..', 'notes_viewer.html'), pattern: /serviceWorker\.register\(['"]\.\/sw\.js(?:\?v=?v?\d{8})?['"]\)/, makeReplacement: () => `serviceWorker.register('./sw.js?v=${queryVersion}')` },
+  'index.html',
+  'work_planner.html',
+  'notes_viewer.html',
+  'machine_location.html',
+  'admin_notes.html',
+  'theme_manager.js',
+  'sw.js'
 ];
 
-if (!cacheVersionPattern.test(originalContent)) {
-  throw new Error('CACHE_VERSION declaration not found in sw.js');
+const replacements = [
+  {
+    name: 'service worker cache version',
+    pattern: /const CACHE_VERSION = '\d{8}';/,
+    replacement: `const CACHE_VERSION = '${version}';`
+  },
+  {
+    name: 'app version',
+    pattern: /const APP_VERSION = '\d{8}';/,
+    replacement: `const APP_VERSION = '${version}';`
+  },
+  {
+    name: 'theme version',
+    pattern: /const THEME_VERSION = '\d{8}';/,
+    replacement: `const THEME_VERSION = '${version}';`
+  },
+  {
+    name: 'local asset query versions',
+    pattern: /(\b(?:href|src)=["'][^"']+\.(?:css|js|html)\?v=)(?:v)?\d{8}/g,
+    replacement: `$1${version}`
+  }
+];
+
+function updateFile(relativePath) {
+  const file = path.join(rootDir, relativePath);
+  let content = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
+  let changed = false;
+
+  replacements.forEach(({ pattern, replacement }) => {
+    const updated = content.replace(pattern, replacement);
+    if (updated !== content) {
+      content = updated;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    fs.writeFileSync(file, content);
+  }
+
+  return changed;
 }
 
-const updatedContent = originalContent.replace(cacheVersionPattern, `const CACHE_VERSION = '${nextVersion}';`);
-fs.writeFileSync(targetFile, updatedContent);
+const changedFiles = filesToUpdate.filter(updateFile);
 
-filesToUpdate.forEach(({ file, pattern, makeReplacement }) => {
-  const content = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
-  const updated = content.replace(pattern, makeReplacement());
-  fs.writeFileSync(file, updated);
-});
-
-console.log(`CACHE_VERSION bumped to ${nextVersion} and service worker register URL updated.`);
+if (changedFiles.length === 0) {
+  console.log(`No cache version changes needed for ${version}.`);
+} else {
+  console.log(`Cache version bumped to ${version}. Updated: ${changedFiles.join(', ')}`);
+}
