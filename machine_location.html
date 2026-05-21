@@ -334,35 +334,6 @@
         }
         .poi-popup-btn:hover { opacity: 0.85; }
 
-        /* Modern Glassmorphism Tooltip */
-        .glass-tooltip {
-            background: rgba(20, 20, 20, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 16px;
-            color: #fff;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 0;
-            transform: translateY(10px);
-            pointer-events: none;
-            min-width: 160px;
-            font-family: var(--font-family);
-        }
-        .tooltip-title {
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 4px;
-            color: #4da3ff;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .tooltip-stat {
-            font-size: 11px;
-            color: #a1a1aa;
-        }
 
         /* Modern Polygon Transitions */
         .modern-polygon {
@@ -790,82 +761,31 @@
                 maxZoom: 19, attribution: '© OpenStreetMap, © CartoDB'
             }).addTo(map);
 
-            // Setup Glassmorphism Tooltip Control
-            const regionTooltip = L.control({position: 'topright'});
-            regionTooltip.onAdd = function (map) {
-                this._div = L.DomUtil.create('div', 'glass-tooltip');
-                this.update();
-                return this._div;
-            };
-            regionTooltip.update = function (props) {
-                if (props) {
-                    this._div.innerHTML = `
-                        <div class="tooltip-title">${props.name || 'Wilayah'}</div>
-                        <div class="tooltip-stat">✨ Area Operasional Aktif</div>
-                    `;
-                    this._div.style.opacity = 1;
-                    this._div.style.transform = 'translateY(0)';
-                } else {
-                    this._div.style.opacity = 0;
-                    this._div.style.transform = 'translateY(10px)';
-                }
-            };
-            regionTooltip.addTo(map);
-
-            // Load precise GeoJSON boundary and render as interactive polygons
+            // Load boundary polygons (visual only, non-interactive)
             fetch('data/surabaya-madura.json')
                 .then(res => res.json())
                 .then(data => {
-                    const geojsonLayer = L.geoJSON(data, {
+                    L.geoJSON(data, {
+                        interactive: false,
                         style: function (feature) {
                             const name = feature.properties.name || '';
-                            let fillColor = '#4da3ff'; // Low
-                            if (name === 'Surabaya') fillColor = '#1e3a8a'; // High
-                            else if (name === 'Bangkalan') fillColor = '#2563eb'; // Medium
+                            let fillColor = '#4da3ff';
+                            if (name === 'Surabaya') fillColor = '#1e3a8a';
+                            else if (name === 'Bangkalan') fillColor = '#2563eb';
                             
                             return {
                                 fillColor: fillColor,
-                                fillOpacity: 0.25,
-                                color: '#4da3ff', // Tetap biru muda untuk outline border glow
-                                weight: 0.5,
-                                opacity: 0.4,
-                                className: 'modern-polygon'
+                                fillOpacity: 0.15,
+                                color: '#4da3ff',
+                                weight: 1.5,
+                                opacity: 0.5
                             };
-                        },
-                        onEachFeature: function (feature, layer) {
-                            layer.on({
-                                mouseover: function (e) {
-                                    const l = e.target;
-                                    l.setStyle({
-                                        fillOpacity: 0.55,
-                                        weight: 2,
-                                        opacity: 1
-                                    });
-                                    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-                                        l.bringToFront();
-                                    }
-                                    regionTooltip.update(layer.feature.properties);
-                                },
-                                mouseout: function (e) {
-                                    geojsonLayer.resetStyle(e.target);
-                                    regionTooltip.update();
-                                },
-                                mousedown: function (e) {
-                                    if (e.originalEvent && e.originalEvent.button !== 0) return;
-                                    startPress(e.latlng, e.originalEvent.clientX, e.originalEvent.clientY);
-                                },
-                                touchstart: function (e) {
-                                    if (e.originalEvent) e.originalEvent.stopPropagation();
-                                    const touch = e.originalEvent && e.originalEvent.touches ? e.originalEvent.touches[0] : null;
-                                    startPress(e.latlng, touch ? touch.clientX : undefined, touch ? touch.clientY : undefined);
-                                }
-                            });
                         }
                     }).addTo(map);
                 })
-                .catch(e => console.error('Gagal memuat batas wilayah presisi:', e));
+                .catch(e => console.error('Gagal memuat batas wilayah:', e));
 
-            // Load Surabaya Grids (Barat, Timur, dll)
+            // Load Surabaya Grids (visual only, non-interactive)
             fetch('data/surabaya-grids.json')
                 .then(res => res.json())
                 .then(data => {
@@ -876,47 +796,18 @@
                         'Surabaya Selatan': '#fb8500',
                         'Surabaya Barat': '#e63946'
                     };
-                    const gridLayer = L.geoJSON(data, {
+                    L.geoJSON(data, {
+                        interactive: false,
                         style: function (feature) {
                             const zone = feature.properties.zona;
                             return {
                                 fillColor: gridColors[zone] || '#fff',
-                                fillOpacity: 0.05,
+                                fillOpacity: 0.03,
                                 color: gridColors[zone] || '#fff',
                                 weight: 1.5,
                                 opacity: 0.8,
-                                dashArray: '5, 5', // Dashed border for zones
-                                className: 'modern-polygon'
+                                dashArray: '5, 5'
                             };
-                        },
-                        onEachFeature: function (feature, layer) {
-                            layer.on({
-                                mouseover: function (e) {
-                                    const l = e.target;
-                                    l.setStyle({
-                                        fillOpacity: 0.25,
-                                        weight: 3,
-                                        opacity: 1
-                                    });
-                                    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-                                        l.bringToFront();
-                                    }
-                                    regionTooltip.update({ name: feature.properties.zona + '<br><span style="font-size:10px;font-weight:normal;color:#aaa">Kec. ' + feature.properties.kecamatan + '</span>' });
-                                },
-                                mouseout: function (e) {
-                                    gridLayer.resetStyle(e.target);
-                                    regionTooltip.update();
-                                },
-                                mousedown: function (e) {
-                                    if (e.originalEvent && e.originalEvent.button !== 0) return;
-                                    startPress(e.latlng, e.originalEvent.clientX, e.originalEvent.clientY);
-                                },
-                                touchstart: function (e) {
-                                    if (e.originalEvent) e.originalEvent.stopPropagation();
-                                    const touch = e.originalEvent && e.originalEvent.touches ? e.originalEvent.touches[0] : null;
-                                    startPress(e.latlng, touch ? touch.clientX : undefined, touch ? touch.clientY : undefined);
-                                }
-                            });
                         }
                     }).addTo(map);
                 })
