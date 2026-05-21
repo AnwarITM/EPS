@@ -9,10 +9,10 @@
     <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
 
-    <link rel="stylesheet" href="design-tokens.css?v=20260521">
-    <link rel="stylesheet" href="styles.css?v=20260521">
-    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=20260521">
-    <script src="custom_dialogs.js?v=20260521"></script>
+    <link rel="stylesheet" href="design-tokens.css?v=202605211327">
+    <link rel="stylesheet" href="styles.css?v=202605211327">
+    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202605211327">
+    <script src="custom_dialogs.js?v=202605211327"></script>
 
     <!-- Leaflet Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -511,8 +511,12 @@
                 </select>
             </div>
             <div style="margin-bottom: var(--space-4);">
-                <div class="metric-label">Nama Mesin / WSID</div>
-                <input type="text" id="machineNameInput" class="cell-edit" placeholder="Contoh: ATM-1234" onkeypress="if(event.key==='Enter')confirmAddMachine()">
+                <div class="metric-label">Nama Mesin</div>
+                <input type="text" id="machineNameInput" class="cell-edit" placeholder="Contoh: KC Surabaya" onkeypress="if(event.key==='Enter')document.getElementById('machineWsidInput').focus()">
+            </div>
+            <div style="margin-bottom: var(--space-4);">
+                <div class="metric-label">WSID</div>
+                <input type="text" id="machineWsidInput" class="cell-edit" placeholder="Contoh: ATM-1234" onkeypress="if(event.key==='Enter')confirmAddMachine()">
             </div>
             <div style="display: flex; gap: var(--space-3);">
                 <button class="btn btn-secondary" style="flex:1;" onclick="closeAddModal()">Batal</button>
@@ -539,8 +543,12 @@
                 </select>
             </div>
             <div style="margin-bottom: var(--space-4);">
-                <div class="metric-label">Nama Mesin / WSID</div>
-                <input type="text" id="editMachineNameInput" class="cell-edit" placeholder="Contoh: ATM-1234" onkeypress="if(event.key==='Enter')confirmEditMachine()">
+                <div class="metric-label">Nama Mesin</div>
+                <input type="text" id="editMachineNameInput" class="cell-edit" placeholder="Contoh: KC Surabaya" onkeypress="if(event.key==='Enter')document.getElementById('editMachineWsidInput').focus()">
+            </div>
+            <div style="margin-bottom: var(--space-4);">
+                <div class="metric-label">WSID</div>
+                <input type="text" id="editMachineWsidInput" class="cell-edit" placeholder="Contoh: ATM-1234" onkeypress="if(event.key==='Enter')confirmEditMachine()">
             </div>
             <div style="display: flex; gap: var(--space-3);">
                 <button class="btn btn-secondary" style="flex:1;" onclick="closeEditModal()">Batal</button>
@@ -593,7 +601,7 @@
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="theme_manager.js?v=20260521"></script>
+    <script src="theme_manager.js?v=202605211327"></script>
 
     <script>
         // === Theme ===
@@ -650,6 +658,7 @@
         let pressTimer = null;
         let isPressing = false;
         let pressStartPoint = null; // Track initial touch/mouse position for tolerance
+        let lastTouchTime = 0; // Track last touchstart timestamp to prevent double triggers on mobile
         const HOLD_DURATION = 600; // ms - slightly shorter for better UX
         const MOVE_TOLERANCE = 15; // px - tolerance for finger movement during hold
 
@@ -698,7 +707,7 @@
 
                 hideHoldRing();
 
-                if (!sbyMaduraBounds.contains(latlng)) {
+                if (!latlng || !sbyMaduraBounds.contains(latlng)) {
                     alert("⚠️ Area di luar batas operasional. Harap pilih lokasi di sekitar Surabaya atau Madura.");
                     // Re-enable dragging
                     if (map && map.dragging) map.dragging.enable();
@@ -712,6 +721,7 @@
                 document.getElementById('coordDisplay').textContent =
                     `Lat: ${latlng.lat.toFixed(5)}, Lng: ${latlng.lng.toFixed(5)}`;
                 document.getElementById('machineNameInput').value = '';
+                document.getElementById('machineWsidInput').value = '';
                 document.getElementById('machineCategoryInput').value = 'BCA';
                 openAddModal();
 
@@ -741,6 +751,40 @@
             const dx = currentX - pressStartPoint.x;
             const dy = currentY - pressStartPoint.y;
             return Math.sqrt(dx * dx + dy * dy) > MOVE_TOLERANCE;
+        }
+
+        // Helper to check if a touch or click target is an interactive element on the map
+        function shouldIgnorePress(oe) {
+            if (!oe || !oe.target) return false;
+            const target = oe.target;
+
+            // 1. Ignore if clicking on markers or their icons/shadows
+            if (target.classList && (
+                target.classList.contains('leaflet-marker-icon') || 
+                target.classList.contains('leaflet-marker-shadow') || 
+                target.closest('.leaflet-marker-icon') || 
+                target.closest('.leaflet-marker-shadow')
+            )) {
+                return true;
+            }
+
+            // 2. Ignore if clicking inside popups (e.g. clicking buttons inside popup)
+            if (target.closest('.leaflet-popup') || target.closest('.leaflet-popup-pane')) {
+                return true;
+            }
+
+            // 3. Ignore if clicking on map UI controls (zoom buttons, layers control, search input, etc.)
+            if (target.closest('.leaflet-control-container') || target.closest('.search-container')) {
+                return true;
+            }
+
+            // 4. Ignore if clicking on interactive vector shapes (like POI circle markers)
+            // Leaflet assigns the 'leaflet-interactive' class to all interactive path/circle elements
+            if (target.closest('.leaflet-interactive') || (target.classList && target.classList.contains('leaflet-interactive'))) {
+                return true;
+            }
+
+            return false;
         }
 
         function initMap() {
@@ -816,7 +860,19 @@
             // Universal hold-press event tracking on the empty map
             map.on('mousedown', function(e) {
                 if (e.originalEvent && e.originalEvent.button !== 0) return;
-                startPress(e.latlng, e.originalEvent.clientX, e.originalEvent.clientY);
+                if (Date.now() - lastTouchTime < 1000) return; // Prevent emulated mouse events
+                if (shouldIgnorePress(e.originalEvent)) return;
+                
+                let latlng = e.latlng;
+                if (!latlng && e.originalEvent) {
+                    try {
+                        latlng = map.mouseEventToLatLng(e.originalEvent);
+                    } catch (err) {
+                        console.error('Failed to convert mousedown to latlng:', err);
+                    }
+                }
+                
+                startPress(latlng, e.originalEvent.clientX, e.originalEvent.clientY);
             });
             map.on('mouseup', cancelPress);
             map.on('mousemove', function(e) {
@@ -830,13 +886,25 @@
 
             // Fix: Use e.originalEvent.touches instead of e.touches
             map.on('touchstart', function(e) {
+                lastTouchTime = Date.now();
                 const oe = e.originalEvent;
                 if (oe && oe.touches && oe.touches.length > 1) {
                     cancelPress(); // Cancel if multi-touch (pinch zoom)
                     return;
                 }
+                if (shouldIgnorePress(oe)) return;
                 const touch = oe && oe.touches ? oe.touches[0] : null;
-                startPress(e.latlng, touch ? touch.clientX : undefined, touch ? touch.clientY : undefined);
+                
+                let latlng = e.latlng;
+                if (!latlng && touch) {
+                    try {
+                        latlng = map.mouseEventToLatLng(touch);
+                    } catch (err) {
+                        console.error('Failed to convert touch event to latlng:', err);
+                    }
+                }
+                
+                startPress(latlng, touch ? touch.clientX : undefined, touch ? touch.clientY : undefined);
             });
             map.on('touchend', cancelPress);
             // Fix: Only cancel if finger moved beyond tolerance threshold
@@ -1002,6 +1070,7 @@ out center;`;
                         document.getElementById('coordDisplay').textContent =
                             `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
                         document.getElementById('machineNameInput').value = name; // Isi otomatis nama POI bank/minimarket
+                        document.getElementById('machineWsidInput').value = ''; // Reset WSID
                         document.getElementById('machineCategoryInput').value = cat;
                         circle.closePopup();
                         openAddModal();
@@ -1035,9 +1104,10 @@ out center;`;
             let visibleCount = 0;
             Object.values(markersMap).forEach(({ marker, item }) => {
                 const nameMatch = item.name && item.name.toLowerCase().includes(searchQuery);
+                const wsidMatch = item.wsid && item.wsid.toLowerCase().includes(searchQuery);
                 const catMatch = item.category && item.category.toLowerCase().includes(searchQuery);
                 
-                if (searchQuery === '' || nameMatch || catMatch) {
+                if (searchQuery === '' || nameMatch || wsidMatch || catMatch) {
                     if (!map.hasLayer(marker)) marker.addTo(map);
                     visibleCount++;
                 } else {
@@ -1067,13 +1137,14 @@ out center;`;
         function confirmAddMachine() {
             if (!pendingLatLng) return;
             const name = document.getElementById('machineNameInput').value.trim();
+            const wsid = document.getElementById('machineWsidInput').value.trim();
             const category = document.getElementById('machineCategoryInput').value;
             if (!name) {
                 const inp = document.getElementById('machineNameInput');
                 inp.style.borderColor = '#ef4444'; inp.placeholder = 'Nama wajib diisi!';
                 return;
             }
-            machinesRef.push({ name, category, lat: pendingLatLng.lat, lng: pendingLatLng.lng, createdAt: Date.now() })
+            machinesRef.push({ name, wsid, category, lat: pendingLatLng.lat, lng: pendingLatLng.lng, createdAt: Date.now() })
                 .then(() => closeAddModal())
                 .catch(err => alert('Gagal menyimpan: ' + err.message));
         }
@@ -1087,6 +1158,7 @@ out center;`;
             document.getElementById('editCoordDisplay').textContent =
                 `Lat: ${data.item.lat.toFixed(5)}, Lng: ${data.item.lng.toFixed(5)}`;
             document.getElementById('editMachineNameInput').value = data.item.name || '';
+            document.getElementById('editMachineWsidInput').value = data.item.wsid || '';
             document.getElementById('editMachineCategoryInput').value = data.item.category || 'BCA';
             document.getElementById('editModal').style.display = 'flex';
             setTimeout(() => document.getElementById('editMachineNameInput').focus(), 100);
@@ -1098,13 +1170,14 @@ out center;`;
         function confirmEditMachine() {
             if (!editingKey) return;
             const name = document.getElementById('editMachineNameInput').value.trim();
+            const wsid = document.getElementById('editMachineWsidInput').value.trim();
             const category = document.getElementById('editMachineCategoryInput').value;
             if (!name) {
                 const inp = document.getElementById('editMachineNameInput');
                 inp.style.borderColor = '#ef4444'; inp.placeholder = 'Nama wajib diisi!';
                 return;
             }
-            machinesRef.child(editingKey).update({ name, category })
+            machinesRef.child(editingKey).update({ name, wsid, category })
                 .then(() => closeEditModal())
                 .catch(err => alert('Gagal memperbarui: ' + err.message));
         }
@@ -1174,11 +1247,13 @@ out center;`;
             const cat = item.category || 'Lainnya';
             const marker = L.marker([item.lat, item.lng], { icon: createPinIcon(cat) });
             const popupContent = document.createElement('div');
+            
+            const wsidDisplay = item.wsid ? `, ${escapeHtml(item.wsid)}` : '';
             popupContent.innerHTML = `
                 <div style="font-size:12px;margin-bottom:2px;">
                     <span style="background:${getCatColor(cat)};color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;">${getCatEmoji(cat)} ${escapeHtml(cat)}</span>
                 </div>
-                <b style="font-size:13px;">${escapeHtml(item.name)}</b><br>
+                <b style="font-size:13px;">${escapeHtml(item.name)}${wsidDisplay}</b><br>
                 <span style="font-size:10px;color:#888;">Lat: ${item.lat.toFixed(5)}, Lng: ${item.lng.toFixed(5)}</span>
             `;
             

@@ -6,7 +6,7 @@ const packageJson = require(path.join(rootDir, 'package.json'));
 const appVersion = packageJson.version || '1.0.0';
 
 const now = new Date();
-const version = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+const version = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
 
 const filesToUpdate = [
   'index.html',
@@ -26,22 +26,22 @@ const replacements = [
   },
   {
     name: 'service worker cache version',
-    pattern: /const CACHE_VERSION = '\d{8}';/,
+    pattern: /const CACHE_VERSION = '\d+';/,
     replacement: `const CACHE_VERSION = '${version}';`
   },
   {
     name: 'app version',
-    pattern: /const APP_VERSION = '\d{8}';/,
+    pattern: /const APP_VERSION = '\d+';/,
     replacement: `const APP_VERSION = '${version}';`
   },
   {
     name: 'theme version',
-    pattern: /const THEME_VERSION = '\d{8}';/,
+    pattern: /const THEME_VERSION = '\d+';/,
     replacement: `const THEME_VERSION = '${version}';`
   },
   {
     name: 'local asset query versions',
-    pattern: /(\b(?:href|src)=["'][^"']+\.(?:css|js|html)\?v=)(?:v)?\d{8}/g,
+    pattern: /(\b(?:href|src)=["'][^"']+\.(?:css|js|html)\?v=)(?:v)?\d+/g,
     replacement: `$1${version}`
   }
 ];
