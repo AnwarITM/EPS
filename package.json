@@ -1,5 +1,6 @@
 {
   "name": "eps",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "build": "node ./scripts/update-cache-version.js"

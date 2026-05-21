@@ -2,6 +2,9 @@ const fs = require('fs');
 const path = require('path');
 
 const rootDir = path.join(__dirname, '..');
+const packageJson = require(path.join(rootDir, 'package.json'));
+const appVersion = packageJson.version || '1.0.0';
+
 const now = new Date();
 const version = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 
@@ -16,6 +19,11 @@ const filesToUpdate = [
 ];
 
 const replacements = [
+  {
+    name: 'app semantic version',
+    pattern: /const APP_SEMANTIC_VERSION = '[^']+';/,
+    replacement: `const APP_SEMANTIC_VERSION = '${appVersion}';`
+  },
   {
     name: 'service worker cache version',
     pattern: /const CACHE_VERSION = '\d{8}';/,

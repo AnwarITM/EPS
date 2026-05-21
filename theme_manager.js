@@ -4,6 +4,7 @@
  */
 
 const THEME_KEY = 'eps_theme_pref';
+const APP_SEMANTIC_VERSION = '1.2.0';
 const THEME_VERSION = '20260521';
 
 const THEME_MANIFEST = {
@@ -16,6 +17,30 @@ const THEME_MANIFEST = {
 };
 
 const DARK_THEMES = ['linear', 'supabase', 'liquid-glass'];
+
+// Function to append version info at the bottom of theme modal content
+function appendVersionFooter() {
+    const modalContent = document.querySelector('#themeModal .modal-content');
+    if (modalContent && !document.getElementById('eps-version-footer')) {
+        const hr = document.createElement('hr');
+        hr.style.border = '0';
+        hr.style.borderTop = '1px dashed var(--surface-border)';
+        hr.style.margin = 'var(--space-6) 0 var(--space-4) 0';
+        hr.style.opacity = '0.5';
+        
+        const footer = document.createElement('div');
+        footer.id = 'eps-version-footer';
+        footer.style.textAlign = 'center';
+        footer.style.fontSize = 'var(--font-size-xs)';
+        footer.style.color = 'var(--text-secondary)';
+        footer.style.fontWeight = '600';
+        footer.style.letterSpacing = '0.03em';
+        footer.innerHTML = `EPS v${APP_SEMANTIC_VERSION} • Build ${THEME_VERSION}`;
+        
+        modalContent.appendChild(hr);
+        modalContent.appendChild(footer);
+    }
+}
 
 // Function to update UI state based on theme
 function updateThemeUI(themeId) {
@@ -37,6 +62,9 @@ function updateThemeUI(themeId) {
         btn.setAttribute('aria-label', label);
         btn.setAttribute('title', label);
     });
+
+    // Append version footer
+    appendVersionFooter();
 }
 
 // Function to immediately apply theme (can be called in head)
