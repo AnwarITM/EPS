@@ -5,7 +5,7 @@
 
 const THEME_KEY = 'eps_theme_pref';
 const APP_SEMANTIC_VERSION = '1.2.0';
-const THEME_VERSION = '202605211327';
+const THEME_VERSION = '202605212123';
 
 const THEME_MANIFEST = {
     'default': `theme-default.css?v=${THEME_VERSION}`,

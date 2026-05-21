@@ -9,10 +9,10 @@
     <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
 
-    <link rel="stylesheet" href="design-tokens.css?v=202605211327">
-    <link rel="stylesheet" href="styles.css?v=202605211327">
-    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202605211327">
-    <script src="custom_dialogs.js?v=202605211327"></script>
+    <link rel="stylesheet" href="design-tokens.css?v=202605212123">
+    <link rel="stylesheet" href="styles.css?v=202605212123">
+    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202605212123">
+    <script src="custom_dialogs.js?v=202605212123"></script>
 
     <!-- Leaflet Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -80,6 +80,10 @@
             box-shadow: none;
             margin-bottom: 0;
             z-index: 1;
+            /* Prevent native select/menus on touch/hold */
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
         .info-bar {
             background: var(--surface-1);
@@ -601,7 +605,7 @@
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="theme_manager.js?v=202605211327"></script>
+    <script src="theme_manager.js?v=202605212123"></script>
 
     <script>
         // === Theme ===
@@ -884,38 +888,41 @@
             });
             map.on('zoomstart', cancelPress);
 
-            // Fix: Use e.originalEvent.touches instead of e.touches
-            map.on('touchstart', function(e) {
+            // Use native DOM touch listeners on the map container to bypass Leaflet event swallowing
+            const container = map.getContainer();
+
+            container.addEventListener('touchstart', function(e) {
                 lastTouchTime = Date.now();
-                const oe = e.originalEvent;
-                if (oe && oe.touches && oe.touches.length > 1) {
+                if (e.touches && e.touches.length > 1) {
                     cancelPress(); // Cancel if multi-touch (pinch zoom)
                     return;
                 }
-                if (shouldIgnorePress(oe)) return;
-                const touch = oe && oe.touches ? oe.touches[0] : null;
+                if (shouldIgnorePress(e)) return;
+                const touch = e.touches ? e.touches[0] : null;
+                if (!touch) return;
                 
-                let latlng = e.latlng;
-                if (!latlng && touch) {
-                    try {
-                        latlng = map.mouseEventToLatLng(touch);
-                    } catch (err) {
-                        console.error('Failed to convert touch event to latlng:', err);
-                    }
+                let latlng = null;
+                try {
+                    latlng = map.mouseEventToLatLng(touch);
+                } catch (err) {
+                    console.error('Failed to convert touch event to latlng:', err);
                 }
                 
-                startPress(latlng, touch ? touch.clientX : undefined, touch ? touch.clientY : undefined);
-            });
-            map.on('touchend', cancelPress);
-            // Fix: Only cancel if finger moved beyond tolerance threshold
-            map.on('touchmove', function(e) {
-                if (isPressing && e.originalEvent) {
-                    const touch = e.originalEvent.touches ? e.originalEvent.touches[0] : null;
+                startPress(latlng, touch.clientX, touch.clientY);
+            }, { passive: true });
+
+            container.addEventListener('touchend', function(e) {
+                cancelPress();
+            }, { passive: true });
+
+            container.addEventListener('touchmove', function(e) {
+                if (isPressing) {
+                    const touch = e.touches ? e.touches[0] : null;
                     if (touch && hasMovedBeyondTolerance(touch.clientX, touch.clientY)) {
                         cancelPress();
                     }
                 }
-            });
+            }, { passive: true });
 
             loadMachinesFromFirebase();
             loadPOILayer();
