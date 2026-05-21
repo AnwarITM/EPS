@@ -9,10 +9,10 @@
     <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
 
-    <link rel="stylesheet" href="design-tokens.css?v=20260519">
-    <link rel="stylesheet" href="styles.css?v=20260519">
-    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=20260519">
-    <script src="custom_dialogs.js?v=20260519"></script>
+    <link rel="stylesheet" href="design-tokens.css?v=20260521">
+    <link rel="stylesheet" href="styles.css?v=20260521">
+    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=20260521">
+    <script src="custom_dialogs.js?v=20260521"></script>
 
     <!-- Leaflet Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -622,7 +622,7 @@
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="theme_manager.js?v=20260519"></script>
+    <script src="theme_manager.js?v=20260521"></script>
 
     <script>
         // === Theme ===
@@ -1218,18 +1218,66 @@ out center;`;
                 .catch(err => alert('Gagal memperbarui: ' + err.message));
         }
 
-        // === Firebase ===
-        function loadMachinesFromFirebase() {
-            machinesRef.on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                Object.values(markersMap).forEach(({ marker }) => map.removeLayer(marker));
-                markersMap = {};
-                Object.entries(data).forEach(([key, item]) => addMarkerToMap(key, item));
-                document.getElementById('machineCount').textContent = Object.keys(data).length;
-                document.getElementById('mapLoading').style.display = 'none';
+        // === Firebase (Incremental Updates) ===
+        function updateMachineCount() {
+            const total = Object.keys(markersMap).length;
+            const countEl = document.getElementById('machineCount');
+            if (searchQuery !== '') {
+                // Let applySearchFilter handle the "visible/total" format
                 applySearchFilter();
+            } else {
+                countEl.textContent = total;
+            }
+        }
+
+        function loadMachinesFromFirebase() {
+            // child_added: fires once per existing child, then for each new one
+            machinesRef.on('child_added', (snapshot) => {
+                const key = snapshot.key;
+                const item = snapshot.val();
+                if (!item) return;
+                addMarkerToMap(key, item);
+                updateMachineCount();
+            });
+
+            // child_changed: only the changed machine is updated
+            machinesRef.on('child_changed', (snapshot) => {
+                const key = snapshot.key;
+                const item = snapshot.val();
+                // Remove old marker
+                if (markersMap[key]) {
+                    map.removeLayer(markersMap[key].marker);
+                    delete markersMap[key];
+                }
+                // Add updated marker
+                if (item) {
+                    addMarkerToMap(key, item);
+                }
+                updateMachineCount();
+            });
+
+            // child_removed: only the deleted machine is removed
+            machinesRef.on('child_removed', (snapshot) => {
+                const key = snapshot.key;
+                if (markersMap[key]) {
+                    map.removeLayer(markersMap[key].marker);
+                    delete markersMap[key];
+                }
+                updateMachineCount();
+            });
+
+            // Hide loading overlay after initial data load
+            machinesRef.once('value', () => {
+                document.getElementById('mapLoading').style.display = 'none';
             });
         }
+
+        // Cleanup Firebase listeners when leaving page
+        window.addEventListener('beforeunload', () => {
+            machinesRef.off('child_added');
+            machinesRef.off('child_changed');
+            machinesRef.off('child_removed');
+        });
 
         function addMarkerToMap(key, item) {
             const cat = item.category || 'Lainnya';

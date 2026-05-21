@@ -4,7 +4,7 @@
  */
 
 const THEME_KEY = 'eps_theme_pref';
-const THEME_VERSION = '20260519';
+const THEME_VERSION = '20260521';
 
 const THEME_MANIFEST = {
     'default': `theme-default.css?v=${THEME_VERSION}`,
