@@ -6,10 +6,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Notes • EPS</title>
   
-  <link rel="stylesheet" href="design-tokens.css?v=202605212123">
-  <link rel="stylesheet" href="styles.css?v=202605212123">
-  <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202605212123">
-  <script src="theme_manager.js?v=202605212123"></script>
+  <!-- PWA & Cache management -->
+  <meta name="theme-color" content="#0070f3" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TaskManager" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <script>
+    const APP_VERSION = '202605212131';
+    const CACHE_PREFIX = 'eps-work-planner-v';
+    const SW_URL = `./sw.js?v=${APP_VERSION}`;
+    const SW_SCRIPT_URL = new URL(SW_URL, location.href).href;
+    const IS_LOCALHOST = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+    const CAN_LOAD_MANIFEST = location.protocol === 'http:' || location.protocol === 'https:';
+    const CAN_USE_SERVICE_WORKER = location.protocol === 'https:' || IS_LOCALHOST;
+
+    if (CAN_LOAD_MANIFEST) {
+      const manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      manifestLink.href = 'manifest.json';
+      document.head.appendChild(manifestLink);
+    }
+
+    if (CAN_USE_SERVICE_WORKER && 'caches' in window) {
+      const savedVersion = localStorage.getItem('eps-app-version');
+      const alreadyRefreshed = sessionStorage.getItem('eps-version-refreshed');
+
+      if (savedVersion !== APP_VERSION && !alreadyRefreshed) {
+        caches.keys()
+          .then((names) => Promise.all(
+            names
+              .filter((name) => name.startsWith(CACHE_PREFIX) && name !== `${CACHE_PREFIX}${APP_VERSION}`)
+              .map((name) => caches.delete(name))
+          ))
+          .finally(() => {
+            localStorage.setItem('eps-app-version', APP_VERSION);
+            sessionStorage.setItem('eps-version-refreshed', 'yes');
+            window.location.reload();
+          });
+      }
+    }
+
+    if (CAN_USE_SERVICE_WORKER && 'serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register(SW_URL).catch((error) => {
+          console.error('Service worker registration failed:', error);
+        });
+      });
+    }
+  </script>
+  
+  <link rel="stylesheet" href="design-tokens.css?v=202605212131">
+  <link rel="stylesheet" href="styles.css?v=202605212131">
+  <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202605212131">
+  <script src="theme_manager.js?v=202605212131"></script>
   
   <style>
     .page-header {
