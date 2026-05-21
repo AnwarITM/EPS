@@ -379,6 +379,94 @@
             font-weight: bold;
             font-family: var(--font-family);
         }
+
+        /* === MOBILE TOUCH ENHANCEMENTS === */
+
+        /* Hold progress ring indicator */
+        .hold-progress-ring {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            width: 60px;
+            height: 60px;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+        .hold-progress-ring.active {
+            display: block;
+        }
+        .hold-progress-ring svg {
+            width: 60px;
+            height: 60px;
+            transform: rotate(-90deg);
+        }
+        .hold-progress-ring circle {
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+        }
+        .hold-progress-ring .ring-bg {
+            stroke: rgba(255,255,255,0.2);
+        }
+        .hold-progress-ring .ring-fg {
+            stroke: var(--primary-color, #0070f3);
+            stroke-dasharray: 157;
+            stroke-dashoffset: 157;
+            transition: stroke-dashoffset 0.6s linear;
+        }
+        .hold-progress-ring.filling .ring-fg {
+            stroke-dashoffset: 0;
+        }
+        .hold-progress-ring .ring-icon {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            .info-bar .hint {
+                font-size: 11px;
+            }
+            /* Larger popup close button for touch */
+            .leaflet-popup-close-button {
+                width: 28px !important;
+                height: 28px !important;
+                font-size: 20px !important;
+                padding: 4px !important;
+            }
+            /* Larger popup buttons for touch */
+            .popup-btn-group button {
+                padding: 8px 10px;
+                font-size: 12px;
+                min-height: 36px;
+            }
+            .poi-popup-btn {
+                padding: 8px 10px;
+                font-size: 12px;
+                min-height: 36px;
+            }
+            /* Better touch target for POI chips */
+            .poi-chip {
+                padding: 10px 16px;
+                font-size: var(--font-size-sm);
+            }
+            /* Optimize modal for mobile */
+            .modal-content {
+                max-height: 90vh;
+                overflow-y: auto;
+                margin: var(--space-2);
+            }
+            .cell-edit {
+                padding: 12px 14px;
+                font-size: 16px; /* Prevents iOS zoom on focus */
+            }
+            select.cell-edit {
+                font-size: 16px; /* Prevents iOS zoom on focus */
+            }
+        }
     </style>
 </head>
 
@@ -394,7 +482,7 @@
             </header>
 
             <div class="info-bar">
-                <span class="hint">📍 Tap peta untuk tambah mesin</span>
+                <span class="hint">📍 Tahan di peta untuk tambah mesin</span>
                 <span style="display:flex;gap:8px;align-items:center;">
                     <span id="poiStatus" style="font-size:10px;color:var(--text-secondary);"></span>
                     <span>Total: <span class="count" id="machineCount">0</span></span>
@@ -421,6 +509,15 @@
             <div class="map-wrapper">
                 <div id="map"></div>
                 <div class="loading-overlay" id="mapLoading">⏳ Memuat data dari server...</div>
+            </div>
+
+            <!-- Hold progress ring indicator -->
+            <div class="hold-progress-ring" id="holdRing">
+                <svg viewBox="0 0 54 54">
+                    <circle class="ring-bg" cx="27" cy="27" r="25"/>
+                    <circle class="ring-fg" cx="27" cy="27" r="25"/>
+                </svg>
+                <span class="ring-icon">📍</span>
             </div>
         </div>
     </div>
@@ -581,41 +678,98 @@
         let activePoiFilter = 'all';
         let pressTimer = null;
         let isPressing = false;
+        let pressStartPoint = null; // Track initial touch/mouse position for tolerance
+        const HOLD_DURATION = 600; // ms - slightly shorter for better UX
+        const MOVE_TOLERANCE = 15; // px - tolerance for finger movement during hold
 
-        function startPress(latlng) {
+        // Bounding Box Surabaya - Madura (reusable)
+        const sbyMaduraBounds = L.latLngBounds(
+            L.latLng(-7.45, 112.50),
+            L.latLng(-6.80, 114.15)
+        );
+
+        // === Hold Progress Ring (visual feedback) ===
+        function showHoldRing(screenX, screenY) {
+            const ring = document.getElementById('holdRing');
+            if (!ring) return;
+            ring.style.left = screenX + 'px';
+            ring.style.top = screenY + 'px';
+            ring.classList.add('active');
+            // Trigger animation after a frame
+            requestAnimationFrame(() => {
+                ring.classList.add('filling');
+            });
+        }
+
+        function hideHoldRing() {
+            const ring = document.getElementById('holdRing');
+            if (!ring) return;
+            ring.classList.remove('active', 'filling');
+        }
+
+        function startPress(latlng, screenX, screenY) {
             cancelPress();
             isPressing = true;
+            pressStartPoint = { x: screenX || 0, y: screenY || 0 };
+
+            // Show visual feedback ring
+            if (screenX !== undefined && screenY !== undefined) {
+                showHoldRing(screenX, screenY);
+            }
+
+            // Disable map dragging during hold attempt to prevent panning
+            if (map && map.dragging) {
+                map.dragging.disable();
+            }
+
             pressTimer = window.setTimeout(function() {
                 if (!isPressing) return;
-                
-                // Guard: Bounding Box Surabaya - Madura
-                const sbyMaduraBounds = L.latLngBounds(
-                    L.latLng(-7.45, 112.50), // Southwest
-                    L.latLng(-6.80, 114.15)  // Northeast
-                );
+
+                hideHoldRing();
 
                 if (!sbyMaduraBounds.contains(latlng)) {
                     alert("⚠️ Area di luar batas operasional. Harap pilih lokasi di sekitar Surabaya atau Madura.");
+                    // Re-enable dragging
+                    if (map && map.dragging) map.dragging.enable();
                     return;
                 }
+
+                // Haptic feedback on mobile if supported
+                if (navigator.vibrate) navigator.vibrate(50);
 
                 pendingLatLng = latlng;
                 document.getElementById('coordDisplay').textContent =
                     `Lat: ${latlng.lat.toFixed(5)}, Lng: ${latlng.lng.toFixed(5)}`;
                 document.getElementById('machineNameInput').value = '';
-                document.getElementById('machineCategoryInput').value = 'BCA'; // Default
+                document.getElementById('machineCategoryInput').value = 'BCA';
                 openAddModal();
-                
+
                 isPressing = false;
-            }, 800); // 800ms hold duration
+                // Re-enable dragging
+                if (map && map.dragging) map.dragging.enable();
+            }, HOLD_DURATION);
         }
 
         function cancelPress() {
             isPressing = false;
+            hideHoldRing();
             if (pressTimer) {
                 window.clearTimeout(pressTimer);
                 pressTimer = null;
             }
+            // Re-enable map dragging when press is cancelled
+            if (map && map.dragging) {
+                map.dragging.enable();
+            }
+            pressStartPoint = null;
+        }
+
+        // Check if finger/mouse moved beyond tolerance
+        function hasMovedBeyondTolerance(currentX, currentY) {
+            if (!pressStartPoint) return false;
+            const dx = currentX - pressStartPoint.x;
+            const dy = currentY - pressStartPoint.y;
+            return Math.sqrt(dx * dx + dy * dy) > MOVE_TOLERANCE;
         }
 
         function initMap() {
@@ -698,10 +852,12 @@
                                 },
                                 mousedown: function (e) {
                                     if (e.originalEvent && e.originalEvent.button !== 0) return;
-                                    startPress(e.latlng);
+                                    startPress(e.latlng, e.originalEvent.clientX, e.originalEvent.clientY);
                                 },
                                 touchstart: function (e) {
-                                    startPress(e.latlng);
+                                    if (e.originalEvent) e.originalEvent.stopPropagation();
+                                    const touch = e.originalEvent && e.originalEvent.touches ? e.originalEvent.touches[0] : null;
+                                    startPress(e.latlng, touch ? touch.clientX : undefined, touch ? touch.clientY : undefined);
                                 }
                             });
                         }
@@ -753,10 +909,12 @@
                                 },
                                 mousedown: function (e) {
                                     if (e.originalEvent && e.originalEvent.button !== 0) return;
-                                    startPress(e.latlng);
+                                    startPress(e.latlng, e.originalEvent.clientX, e.originalEvent.clientY);
                                 },
                                 touchstart: function (e) {
-                                    startPress(e.latlng);
+                                    if (e.originalEvent) e.originalEvent.stopPropagation();
+                                    const touch = e.originalEvent && e.originalEvent.touches ? e.originalEvent.touches[0] : null;
+                                    startPress(e.latlng, touch ? touch.clientX : undefined, touch ? touch.clientY : undefined);
                                 }
                             });
                         }
@@ -767,18 +925,38 @@
             // Universal hold-press event tracking on the empty map
             map.on('mousedown', function(e) {
                 if (e.originalEvent && e.originalEvent.button !== 0) return;
-                startPress(e.latlng);
+                startPress(e.latlng, e.originalEvent.clientX, e.originalEvent.clientY);
             });
             map.on('mouseup', cancelPress);
-            map.on('mousemove', cancelPress);
+            map.on('mousemove', function(e) {
+                if (isPressing && e.originalEvent) {
+                    if (hasMovedBeyondTolerance(e.originalEvent.clientX, e.originalEvent.clientY)) {
+                        cancelPress();
+                    }
+                }
+            });
             map.on('zoomstart', cancelPress);
 
+            // Fix: Use e.originalEvent.touches instead of e.touches
             map.on('touchstart', function(e) {
-                if (e.touches && e.touches.length > 1) return;
-                startPress(e.latlng);
+                const oe = e.originalEvent;
+                if (oe && oe.touches && oe.touches.length > 1) {
+                    cancelPress(); // Cancel if multi-touch (pinch zoom)
+                    return;
+                }
+                const touch = oe && oe.touches ? oe.touches[0] : null;
+                startPress(e.latlng, touch ? touch.clientX : undefined, touch ? touch.clientY : undefined);
             });
             map.on('touchend', cancelPress);
-            map.on('touchmove', cancelPress);
+            // Fix: Only cancel if finger moved beyond tolerance threshold
+            map.on('touchmove', function(e) {
+                if (isPressing && e.originalEvent) {
+                    const touch = e.originalEvent.touches ? e.originalEvent.touches[0] : null;
+                    if (touch && hasMovedBeyondTolerance(touch.clientX, touch.clientY)) {
+                        cancelPress();
+                    }
+                }
+            });
 
             loadMachinesFromFirebase();
             loadPOILayer();
