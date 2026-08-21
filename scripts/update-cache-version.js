@@ -13,6 +13,7 @@ const filesToUpdate = [
   'work_planner.html',
   'notes_viewer.html',
   'machine_location.html',
+  'error_codes.html',
   'admin_notes.html',
   'theme_manager.js',
   'sw.js'

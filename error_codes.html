@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Error Codes Search</title>
+
+  <meta name="theme-color" content="#0070f3" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TaskManager" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <script>
+    const APP_VERSION = '202608212329';
+    const CACHE_PREFIX = 'eps-work-planner-v';
+    const SW_URL = `./sw.js?v=${APP_VERSION}`;
+    const IS_LOCALHOST = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+    const CAN_LOAD_MANIFEST = location.protocol === 'http:' || location.protocol === 'https:';
+    const CAN_USE_SERVICE_WORKER = location.protocol === 'https:' || IS_LOCALHOST;
+
+    if (CAN_LOAD_MANIFEST) {
+      const manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      manifestLink.href = 'manifest.json';
+      document.head.appendChild(manifestLink);
+    }
+
+    if (CAN_USE_SERVICE_WORKER && 'caches' in window) {
+      const savedVersion = localStorage.getItem('eps-app-version');
+      const alreadyRefreshed = sessionStorage.getItem('eps-version-refreshed');
+
+      if (savedVersion !== APP_VERSION && !alreadyRefreshed) {
+        caches.keys()
+          .then((names) => Promise.all(
+            names
+              .filter((name) => name.startsWith(CACHE_PREFIX) && name !== `${CACHE_PREFIX}${APP_VERSION}`)
+              .map((name) => caches.delete(name))
+          ))
+          .finally(() => {
+            localStorage.setItem('eps-app-version', APP_VERSION);
+            sessionStorage.setItem('eps-version-refreshed', 'yes');
+            window.location.reload();
+          });
+      }
+    }
+
+    if (CAN_USE_SERVICE_WORKER && 'serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register(SW_URL).catch((error) => {
+          console.error('Service worker registration failed:', error);
+        });
+      });
+    }
+  </script>
+
+  <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192x192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="icon-512x512.png" />
+
+  <link rel="stylesheet" href="design-tokens.css?v=202608212329">
+  <link rel="stylesheet" href="styles.css?v=202608212329">
+  <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202608212329">
+  <script src="theme_manager.js?v=202608212329"></script>
+
+  <style>
+    .error-page {
+      padding-bottom: calc(var(--nav-height) + var(--space-8));
+      max-width: 1120px;
+    }
+
+    .search-panel {
+      background: var(--surface-1);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      display: grid;
+      gap: var(--space-3);
+      padding: var(--space-4);
+    }
+
+    .search-row {
+      display: block;
+    }
+
+    .search-field {
+      align-items: center;
+      background: var(--surface-2);
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      display: flex;
+      height: 46px;
+      min-width: 0;
+      padding: 0 var(--space-3);
+      width: 100%;
+    }
+
+    .search-input {
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      font-family: inherit;
+      font-size: var(--font-size-base);
+      font-weight: 700;
+      height: 100%;
+      letter-spacing: 0;
+      min-width: 0;
+      outline: none;
+      padding: 0 var(--space-2);
+      text-transform: uppercase;
+      width: 100%;
+    }
+
+    .search-field:focus-within {
+      border-color: var(--primary-color);
+      box-shadow: var(--shadow-focus);
+    }
+
+    .search-input:focus ~ .search-button svg path,
+    .search-input:valid ~ .search-button svg path {
+      fill: none;
+      stroke: var(--primary-color);
+    }
+
+    .clear-icon-btn {
+      align-items: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      height: 100%;
+      justify-content: center;
+      width: 34px;
+    }
+
+    .clear-icon-btn:hover {
+      color: var(--text-color);
+    }
+
+    .search-button {
+      align-items: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-full);
+      color: var(--primary-color);
+      cursor: pointer;
+      display: flex;
+      height: 34px;
+      justify-content: center;
+      min-width: 34px;
+      padding: 0;
+      transition: var(--transition-base);
+      width: 34px;
+    }
+
+    .search-button:hover:not(:disabled) {
+      color: var(--primary-hover);
+    }
+
+    .search-button:focus-visible {
+      outline: none;
+      box-shadow: var(--shadow-focus);
+    }
+
+    .search-button svg {
+      height: 19px;
+      transition: var(--transition-base);
+      width: 19px;
+    }
+
+    .search-button svg path {
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 42;
+      transition: var(--transition-base);
+    }
+
+    .search-button:hover svg path {
+      fill: none;
+      stroke: var(--primary-hover);
+    }
+
+    .search-button:active svg {
+      transform: translateX(2px) scale(0.92);
+    }
+
+    .search-button:disabled {
+      cursor: wait;
+      opacity: 0.72;
+    }
+
+    .search-button:disabled svg {
+      animation: send-pulse 0.75s ease-in-out infinite alternate;
+    }
+
+    .search-button:disabled svg path {
+      fill: none;
+      stroke: var(--primary-color);
+    }
+
+    @keyframes send-pulse {
+      from {
+        transform: translateX(0) scale(1);
+        opacity: 0.6;
+      }
+
+      to {
+        transform: translateX(3px) scale(1.08);
+        opacity: 1;
+      }
+    }
+
+    .status-line {
+      color: var(--text-secondary);
+      font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: var(--font-size-sm);
+      min-height: 22px;
+    }
+
+    .results {
+      display: grid;
+      gap: var(--space-4);
+      margin-top: var(--space-4);
+    }
+
+    .result-card {
+      background: var(--surface-1);
+      border: 1px solid var(--surface-border);
+      border-left: 4px solid var(--primary-color);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+      display: grid;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .result-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--surface-border);
+      background: var(--surface-2);
+    }
+
+    .result-code {
+      color: var(--primary-color);
+      font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      font-size: clamp(22px, 6vw, 32px);
+      font-weight: 800;
+      letter-spacing: 0;
+      word-break: break-word;
+    }
+
+    .badge {
+      border-radius: var(--radius-full);
+      background: var(--surface-2);
+      border: 1px solid var(--surface-border);
+      color: var(--text-secondary);
+      font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge.exact {
+      background: var(--primary-color);
+      color: var(--primary-text);
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .result-section {
+      border-right: 1px solid var(--surface-border);
+      border-bottom: 1px solid var(--surface-border);
+      min-width: 0;
+      padding: var(--space-4);
+    }
+
+    .result-section:nth-child(2n) {
+      border-right: none;
+    }
+
+    .result-section.primary-section {
+      background: var(--surface-2);
+      background: color-mix(in srgb, var(--primary-color) 7%, var(--surface-1));
+    }
+
+    .result-section.full-span {
+      border-right: none;
+      grid-column: 1 / -1;
+    }
+
+    .result-section:last-child {
+      border-bottom: none;
+    }
+
+    .section-label {
+      color: var(--text-secondary);
+      font-size: var(--font-size-xs);
+      font-weight: 700;
+      font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      margin-bottom: var(--space-2);
+      text-transform: uppercase;
+    }
+
+    .section-text {
+      white-space: pre-wrap;
+      color: var(--text-color);
+      font-size: 13px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    .result-meta {
+      margin: var(--space-1) 0 0;
+    }
+
+    .empty-state {
+      background: var(--surface-1);
+      border: 1px dashed var(--surface-border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      display: grid;
+      gap: var(--space-3);
+      justify-items: center;
+      padding: var(--space-12) var(--space-4);
+      text-align: center;
+    }
+
+    .empty-icon {
+      align-items: center;
+      background: var(--surface-2);
+      border-radius: var(--radius-full);
+      color: var(--primary-color);
+      display: flex;
+      height: 52px;
+      justify-content: center;
+      width: 52px;
+    }
+
+    .config-warning {
+      background: var(--status-pending-bg, var(--surface-2));
+      color: var(--status-pending-text, var(--text-color));
+      border-radius: var(--radius-md);
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--font-size-sm);
+      display: none;
+    }
+
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-3);
+    }
+
+    .theme-option {
+      background: var(--surface-2);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      cursor: pointer;
+      transition: var(--transition-base);
+    }
+
+    .theme-option:hover {
+      background: var(--surface-3);
+      transform: translateY(-2px);
+    }
+
+    .theme-preview {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px var(--surface-border);
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      z-index: var(--z-modal);
+      padding: var(--space-4);
+    }
+
+    .modal-content {
+      background: var(--bg-color);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+      width: 100%;
+      max-width: 440px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    @media (max-width: 720px) {
+      .error-page {
+        padding-left: var(--space-3);
+        padding-right: var(--space-3);
+      }
+
+      .search-row {
+        display: block;
+      }
+
+      .search-button {
+        min-width: 34px;
+      }
+
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .result-section,
+      .result-section:nth-child(2n),
+      .result-section.full-span {
+        border-right: none;
+        border-bottom: 1px solid var(--surface-border);
+      }
+
+      .result-section:last-child {
+        border-bottom: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container error-page">
+    <section class="search-panel">
+      <div id="configWarning" class="config-warning">Firebase data belum tersedia di path error_codes.</div>
+      <div class="search-row">
+        <div class="search-field">
+          <input id="queryInput" class="search-input" autocomplete="off" autocapitalize="characters" spellcheck="false"
+            placeholder="" aria-label="Search error code" />
+          <button id="clearButton" class="clear-icon-btn" type="button" title="Clear" aria-label="Clear search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
+            </svg>
+          </button>
+          <button id="searchButton" class="search-button" type="button" aria-label="Search">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 664 663" aria-hidden="true">
+              <path
+                d="M646.293 331.888L17.7538 17.6187L155.245 331.888M646.293 331.888L17.753 646.157L155.245 331.888M646.293 331.888L318.735 330.228L155.245 331.888">
+              </path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div id="statusLine" class="status-line">Enter an error code to begin.</div>
+    </section>
+
+    <main id="results" class="results">
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16"></path>
+            <path d="M4 12h10"></path>
+            <path d="M4 17h7"></path>
+            <path d="M17 14l3 3"></path>
+            <circle cx="16" cy="13" r="3"></circle>
+          </svg>
+        </div>
+        <div>Enter an error code to begin.</div>
+      </div>
+    </main>
+  </div>
+
+  <div id="themeModal" class="modal-overlay" onclick="if(event.target===this)closeThemeModal()">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
+        <h3 style="margin: 0;">Pilih Tema</h3>
+        <button class="btn btn-secondary btn-compact" onclick="closeThemeModal()" aria-label="Close theme modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="theme-grid">
+        <div class="theme-option" onclick="selectTheme('default')"><div class="theme-preview" style="background:#FF0036;"></div><span>Default</span></div>
+        <div class="theme-option" onclick="selectTheme('linear')"><div class="theme-preview" style="background:#5e6ad2;"></div><span>Linear</span></div>
+        <div class="theme-option" onclick="selectTheme('vercel')"><div class="theme-preview" style="background:#000;"></div><span>Vercel</span></div>
+        <div class="theme-option" onclick="selectTheme('apple')"><div class="theme-preview" style="background:#0066cc;"></div><span>Apple</span></div>
+        <div class="theme-option" onclick="selectTheme('supabase')"><div class="theme-preview" style="background:#3ecf8e;"></div><span>Supabase</span></div>
+        <div class="theme-option" onclick="selectTheme('liquid-glass')"><div class="theme-preview" style="background:linear-gradient(135deg,#0f172a,#4c1d95);border:1px solid rgba(255,255,255,0.4);"></div><span>Liquid Glass</span></div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-link">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span>
+      <span>Home</span>
+    </a>
+    <a href="work_planner.html" class="nav-link">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4.5h6"></path><path d="M8 10h8"></path><path d="M8 14h8"></path><path d="M8 18h5"></path></svg></span>
+      <span>Planner</span>
+    </a>
+    <a href="notes_viewer.html" class="nav-link">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1Z"></path><path d="M8 8h7"></path><path d="M8 12h7"></path><path d="M7 20V6"></path></svg></span>
+      <span>Notes</span>
+    </a>
+    <a href="machine_location.html" class="nav-link">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span>
+      <span>Lokasi</span>
+    </a>
+    <a href="error_codes.html" class="nav-link active">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M4 12h10"></path><path d="M4 17h7"></path><path d="M17 14l3 3"></path><circle cx="16" cy="13" r="3"></circle></svg></span>
+      <span>Error</span>
+    </a>
+    <a href="javascript:void(0)" class="nav-link" onclick="openThemeModal()">
+      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"></path><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.98 2.98l-.04-.04A1.8 1.8 0 0 0 14.8 19a1.8 1.8 0 0 0-1.08 1.65V21a2.1 2.1 0 0 1-4.2 0v-.06A1.8 1.8 0 0 0 8.4 19a1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.98-2.98l.04-.04A1.8 1.8 0 0 0 5 15.2a1.8 1.8 0 0 0-1.65-1.08H3a2.1 2.1 0 0 1 0-4.2h.06A1.8 1.8 0 0 0 5 8.8a1.8 1.8 0 0 0-.36-1.98L4.6 6.78A2.1 2.1 0 1 1 7.58 3.8l.04.04A1.8 1.8 0 0 0 9.6 5a1.8 1.8 0 0 0 1.08-1.65V3a2.1 2.1 0 0 1 4.2 0v.06A1.8 1.8 0 0 0 16 5a1.8 1.8 0 0 0 1.98-.36l.04-.04A2.1 2.1 0 1 1 21 7.58l-.04.04A1.8 1.8 0 0 0 19 9.6a1.8 1.8 0 0 0 1.65 1.08H21a2.1 2.1 0 0 1 0 4.2h-.06A1.8 1.8 0 0 0 19.4 15Z"></path></svg></span>
+      <span>Settings</span>
+    </a>
+  </nav>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    function openThemeModal() {
+      document.getElementById('themeModal').style.display = 'flex';
+    }
+
+    function closeThemeModal() {
+      document.getElementById('themeModal').style.display = 'none';
+    }
+
+    function selectTheme(themeId) {
+      setGlobalTheme(themeId);
+      closeThemeModal();
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAqqwSS1KTnAjfGcqvV_-TRHMYXJlTjtlI",
+      authDomain: "catatan-troubleshoot-atm-2b5a4.firebaseapp.com",
+      databaseURL: "https://catatan-troubleshoot-atm-2b5a4-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "catatan-troubleshoot-atm-2b5a4",
+      storageBucket: "catatan-troubleshoot-atm-2b5a4.firebasestorage.app",
+      messagingSenderId: "441198643571",
+      appId: "1:441198643571:web:7ee3c056d933acb3515d06"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const errorCodesRef = db.ref('error_codes');
+    const resultsEl = document.getElementById('results');
+    const statusEl = document.getElementById('statusLine');
+    const queryInput = document.getElementById('queryInput');
+    const searchButton = document.getElementById('searchButton');
+    const clearButton = document.getElementById('clearButton');
+    const configWarning = document.getElementById('configWarning');
+    let cachedRecords = null;
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      })[char]);
+    }
+
+    function normalizeQuery(value) {
+      return value.trim().toUpperCase();
+    }
+
+    function staticPrefix(value) {
+      return value.replace(/X+$/i, '').toUpperCase();
+    }
+
+    function prefixCandidates(value) {
+      const compact = value.replace(/[^A-Z0-9X]/g, '');
+      const prefixes = [];
+
+      for (let index = 1; index <= compact.length; index += 1) {
+        prefixes.push(compact.slice(0, index).replace(/X+$/i, ''));
+      }
+
+      prefixes.push(staticPrefix(compact));
+      return [...new Set(prefixes.filter(Boolean))];
+    }
+
+    function isCodeLike(value) {
+      return /^[A-Z0-9X]{2,}$/.test(value);
+    }
+
+    function snapshotToRecords(snapshot) {
+      const value = snapshot.val();
+      if (!value) return [];
+      return Object.values(value);
+    }
+
+    function uniqueRecords(records) {
+      const map = new Map();
+      records.forEach((record) => {
+        const id = record.source_record_id ?? record.record_id ?? record.error_code_pattern;
+        if (!map.has(id)) map.set(id, record);
+      });
+      return [...map.values()];
+    }
+
+    function sortRecords(term, records) {
+      return records.sort((a, b) => {
+        const aCode = (a.error_code_pattern || '').toUpperCase();
+        const bCode = (b.error_code_pattern || '').toUpperCase();
+        const aExact = aCode === term ? 0 : 1;
+        const bExact = bCode === term ? 0 : 1;
+        if (aExact !== bExact) return aExact - bExact;
+        if ((b.prefix_length || 0) !== (a.prefix_length || 0)) return (b.prefix_length || 0) - (a.prefix_length || 0);
+        return aCode.localeCompare(bCode);
+      });
+    }
+
+    async function queryCodeMatches(term) {
+      const queries = [
+        errorCodesRef.orderByChild('error_code_pattern').equalTo(term).once('value'),
+        errorCodesRef.orderByChild('error_code_pattern').startAt(term).endAt(`${term}\uf8ff`).limitToFirst(200).once('value')
+      ];
+
+      prefixCandidates(term).forEach((prefix) => {
+        queries.push(errorCodesRef.orderByChild('pattern_static_prefix').equalTo(prefix).once('value'));
+      });
+
+      const snapshots = await Promise.all(queries);
+      return uniqueRecords(snapshots.flatMap(snapshotToRecords)).filter((record) => {
+        const code = (record.error_code_pattern || '').toUpperCase();
+        const prefix = (record.pattern_static_prefix || staticPrefix(code)).toUpperCase();
+        return code === term ||
+          code.startsWith(term) ||
+          (record.is_pattern && prefix && term.startsWith(prefix));
+      });
+    }
+
+    async function loadAllRecords() {
+      if (cachedRecords) return cachedRecords;
+      statusEl.textContent = 'Loading keyword index...';
+      const snapshot = await errorCodesRef.once('value');
+      cachedRecords = snapshotToRecords(snapshot);
+      if (!cachedRecords.length) {
+        configWarning.style.display = 'block';
+      }
+      return cachedRecords;
+    }
+
+    async function queryKeywordMatches(term) {
+      const records = await loadAllRecords();
+      return records.filter((record) => {
+        const haystack = [
+          record.error_code_pattern,
+          record.operator_cause,
+          record.operator_recovery,
+          record.service_cause,
+          record.service_recovery,
+          record.service_recovery_all,
+          record.search_text
+        ].join(' ').toUpperCase();
+        return haystack.includes(term);
+      });
+    }
+
+    function isMissingIndexError(error) {
+      return String(error && error.message ? error.message : error).toLowerCase().includes('index not defined');
+    }
+
+    function card(record) {
+      const code = record.error_code_pattern || '';
+      const type = record.is_pattern || code.includes('X') ? 'Pattern' : 'Exact';
+      const serviceRecovery = record.service_recovery_all || record.service_recovery || '';
+      const meta = [
+        `ID: ${record.source_record_id ?? record.record_id ?? '-'}`,
+        `PREFIX: ${record.pattern_static_prefix || '-'}`,
+        `LEN: ${record.prefix_length ?? '-'}`,
+        `RECOVERY: ${record.service_recovery_count ?? 0}`
+      ].join(' / ');
+
+      return `
+        <article class="result-card">
+          <div class="result-top">
+            <div>
+              <div class="result-code">${escapeHtml(code)}</div>
+              <div class="section-label result-meta">${escapeHtml(meta)}</div>
+            </div>
+            <span class="badge ${type.toLowerCase()}">${type}</span>
+          </div>
+          <div class="result-grid">
+            <section class="result-section primary-section">
+              <div class="section-label">Operator Cause</div>
+              <div class="section-text">${escapeHtml(record.operator_cause || '-')}</div>
+            </section>
+            <section class="result-section primary-section">
+              <div class="section-label">Operator Recovery</div>
+              <div class="section-text">${escapeHtml(record.operator_recovery || '-')}</div>
+            </section>
+            <section class="result-section">
+              <div class="section-label">Service Cause</div>
+              <div class="section-text">${escapeHtml(record.service_cause || '-')}</div>
+            </section>
+            <section class="result-section">
+              <div class="section-label">Service</div>
+              <div class="section-text">${escapeHtml(record.service_recovery || '-')}</div>
+            </section>
+            <section class="result-section full-span">
+              <div class="section-label">Service Recovery All</div>
+              <div class="section-text">${escapeHtml(serviceRecovery || '-')}</div>
+            </section>
+            <section class="result-section full-span">
+              <div class="section-label">Errguid Record IDs</div>
+              <div class="section-text">${escapeHtml(record.errguid_record_ids || '-')}</div>
+            </section>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderEmpty(message) {
+      resultsEl.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 7h16"></path>
+              <path d="M4 12h10"></path>
+              <path d="M4 17h7"></path>
+              <path d="M17 14l3 3"></path>
+              <circle cx="16" cy="13" r="3"></circle>
+            </svg>
+          </div>
+          <div>${escapeHtml(message)}</div>
+        </div>
+      `;
+    }
+
+    async function search() {
+      const term = normalizeQuery(queryInput.value);
+      if (!term) {
+        statusEl.textContent = 'Enter an error code to begin.';
+        renderEmpty('Enter an error code to begin.');
+        return;
+      }
+
+      searchButton.disabled = true;
+      searchButton.setAttribute('aria-label', 'Searching');
+      statusEl.textContent = 'Searching...';
+
+      try {
+        const termIsCodeLike = isCodeLike(term);
+        let codeMatches = [];
+
+        if (termIsCodeLike) {
+          try {
+            codeMatches = await queryCodeMatches(term);
+          } catch (error) {
+            if (!isMissingIndexError(error)) throw error;
+            configWarning.style.display = 'block';
+            configWarning.textContent = 'Firebase index belum dipasang. Search tetap berjalan dengan fallback data penuh.';
+          }
+        }
+
+        const keywordMatches = (!termIsCodeLike || codeMatches.length === 0) ? await queryKeywordMatches(term) : [];
+        const rows = sortRecords(term, uniqueRecords(codeMatches.concat(keywordMatches))).slice(0, 200);
+
+        searchButton.disabled = false;
+        searchButton.setAttribute('aria-label', 'Search');
+        statusEl.textContent = `${rows.length} result(s)${rows.length === 200 ? ' (showing first 200)' : ''}`;
+        resultsEl.innerHTML = rows.length ? rows.map(card).join('') : '';
+        if (!rows.length) renderEmpty('No matching error code or keyword.');
+      } catch (error) {
+        console.error(error);
+        searchButton.disabled = false;
+        searchButton.setAttribute('aria-label', 'Search');
+        statusEl.textContent = 'Search failed.';
+        renderEmpty(error.message || 'Gagal mengambil data dari Firebase.');
+      }
+    }
+
+    errorCodesRef.limitToFirst(1).once('value')
+      .then((snapshot) => {
+        if (!snapshot.exists()) {
+          configWarning.style.display = 'block';
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+        configWarning.style.display = 'block';
+        statusEl.textContent = 'Gagal koneksi Firebase.';
+      });
+
+    function clearSearch() {
+      queryInput.value = '';
+      statusEl.textContent = 'Enter an error code to begin.';
+      renderEmpty('Enter an error code to begin.');
+      queryInput.focus();
+    }
+
+    searchButton.addEventListener('click', search);
+    clearButton.addEventListener('click', clearSearch);
+    queryInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') search();
+    });
+  </script>
+</body>
+
+</html>

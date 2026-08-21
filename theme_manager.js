@@ -5,7 +5,7 @@
 
 const THEME_KEY = 'eps_theme_pref';
 const APP_SEMANTIC_VERSION = '1.2.0';
-const THEME_VERSION = '202605212131';
+const THEME_VERSION = '202608212329';
 
 const THEME_MANIFEST = {
     'default': `theme-default.css?v=${THEME_VERSION}`,
@@ -16,7 +16,23 @@ const THEME_MANIFEST = {
     'liquid-glass': `theme-liquid-glass.css?v=${THEME_VERSION}`
 };
 
+const THEME_COLORS = {
+    'default': '#FF0036',
+    'linear': '#5e6ad2',
+    'vercel': '#000000',
+    'apple': '#0066cc',
+    'supabase': '#3ecf8e',
+    'liquid-glass': '#0f172a'
+};
+
 const DARK_THEMES = ['linear', 'supabase', 'liquid-glass'];
+
+function updateMetaThemeColor(themeId) {
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', THEME_COLORS[themeId] || THEME_COLORS['default']);
+    }
+}
 
 // Function to append version info at the bottom of theme modal content
 function appendVersionFooter() {
@@ -91,6 +107,7 @@ function applyTheme() {
     if (link) {
         link.setAttribute('href', themeFile);
     }
+    updateMetaThemeColor(saved);
 
     // Defer UI update slightly to ensure DOM is ready if script runs in head
     if (document.readyState === 'loading') {
@@ -109,6 +126,7 @@ function setGlobalTheme(themeId) {
     if (link) {
         link.setAttribute('href', themeFile);
     }
+    updateMetaThemeColor(themeId);
     localStorage.setItem(THEME_KEY, themeId);
     updateThemeUI(themeId);
 }

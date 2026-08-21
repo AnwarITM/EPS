@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="TaskManager" />
     <meta name="mobile-web-app-capable" content="yes" />
     <script>
-        const APP_VERSION = '202605212131';
+        const APP_VERSION = '202608212329';
         const CACHE_PREFIX = 'eps-work-planner-v';
         const SW_URL = `./sw.js?v=${APP_VERSION}`;
         const SW_SCRIPT_URL = new URL(SW_URL, location.href).href;
@@ -59,10 +59,11 @@
     <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
 
-    <link rel="stylesheet" href="design-tokens.css?v=202605212131">
-    <link rel="stylesheet" href="styles.css?v=202605212131">
-    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202605212131">
-    <script src="custom_dialogs.js?v=202605212131"></script>
+    <link rel="stylesheet" href="design-tokens.css?v=202608212329">
+    <link rel="stylesheet" href="styles.css?v=202608212329">
+    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202608212329">
+    <script src="theme_manager.js?v=202608212329"></script>
+    <script src="custom_dialogs.js?v=202608212329"></script>
 
     <!-- Leaflet Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -646,6 +647,10 @@
             <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span>
             <span>Lokasi</span>
         </a>
+        <a href="error_codes.html" class="nav-link">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M4 12h10"></path><path d="M4 17h7"></path><path d="M17 14l3 3"></path><circle cx="16" cy="13" r="3"></circle></svg></span>
+            <span>Error</span>
+        </a>
         <a href="javascript:void(0)" class="nav-link" onclick="openThemeModal()">
             <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"></path><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.98 2.98l-.04-.04A1.8 1.8 0 0 0 14.8 19a1.8 1.8 0 0 0-1.08 1.65V21a2.1 2.1 0 0 1-4.2 0v-.06A1.8 1.8 0 0 0 8.4 19a1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.98-2.98l.04-.04A1.8 1.8 0 0 0 5 15.2a1.8 1.8 0 0 0-1.65-1.08H3a2.1 2.1 0 0 1 0-4.2h.06A1.8 1.8 0 0 0 5 8.8a1.8 1.8 0 0 0-.36-1.98L4.6 6.78A2.1 2.1 0 1 1 7.58 3.8l.04.04A1.8 1.8 0 0 0 9.6 5a1.8 1.8 0 0 0 1.08-1.65V3a2.1 2.1 0 0 1 4.2 0v.06A1.8 1.8 0 0 0 16 5a1.8 1.8 0 0 0 1.98-.36l.04-.04A2.1 2.1 0 1 1 21 7.58l-.04.04A1.8 1.8 0 0 0 19 9.6a1.8 1.8 0 0 0 1.65 1.08H21a2.1 2.1 0 0 1 0 4.2h-.06A1.8 1.8 0 0 0 19.4 15Z"></path></svg></span>
             <span>Settings</span>
@@ -655,7 +660,6 @@
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="theme_manager.js?v=202605212131"></script>
 
     <script>
         // === Theme ===
