@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
 
   <script>
-    const APP_VERSION = '202608212329';
+    const APP_VERSION = '202608220920';
     const CACHE_PREFIX = 'eps-work-planner-v';
     const SW_URL = `./sw.js?v=${APP_VERSION}`;
     const IS_LOCALHOST = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
@@ -60,10 +60,10 @@
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192x192.png" />
   <link rel="apple-touch-icon" sizes="512x512" href="icon-512x512.png" />
 
-  <link rel="stylesheet" href="design-tokens.css?v=202608212329">
-  <link rel="stylesheet" href="styles.css?v=202608212329">
-  <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202608212329">
-  <script src="theme_manager.js?v=202608212329"></script>
+  <link rel="stylesheet" href="design-tokens.css?v=202608220920">
+  <link rel="stylesheet" href="styles.css?v=202608220920">
+  <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202608220920">
+  <script src="theme_manager.js?v=202608220920"></script>
 
   <style>
     .error-page {
@@ -574,6 +574,18 @@
     const clearButton = document.getElementById('clearButton');
     const configWarning = document.getElementById('configWarning');
     let cachedRecords = null;
+    let localSearchIndex = null;
+    let cacheLoadPromise = null;
+    let fullDataNetworkPromise = null;
+    let browserCacheMeta = null;
+    let backgroundRefreshScheduled = false;
+    let hasCompletedSearch = false;
+    const BROWSER_CACHE_DB = 'eps-error-code-cache';
+    const BROWSER_CACHE_STORE = 'snapshots';
+    const BROWSER_CACHE_KEY = 'error_codes';
+    const BROWSER_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+    const SEARCH_CACHE_LIMIT = 80;
+    const searchResultCache = new Map();
 
     function escapeHtml(value) {
       return String(value || '').replace(/[&<>"']/g, (char) => ({
@@ -593,8 +605,12 @@
       return value.replace(/X+$/i, '').toUpperCase();
     }
 
+    function compactCode(value) {
+      return String(value || '').toUpperCase().replace(/[^A-Z0-9X]/g, '');
+    }
+
     function prefixCandidates(value) {
-      const compact = value.replace(/[^A-Z0-9X]/g, '');
+      const compact = compactCode(value);
       const prefixes = [];
 
       for (let index = 1; index <= compact.length; index += 1) {
@@ -602,17 +618,122 @@
       }
 
       prefixes.push(staticPrefix(compact));
-      return [...new Set(prefixes.filter(Boolean))];
+      return [...new Set(prefixes.filter((prefix) => prefix.length >= 2))];
     }
 
     function isCodeLike(value) {
-      return /^[A-Z0-9X]{2,}$/.test(value);
+      return /^[A-Z0-9X.\-_\s]{2,}$/.test(value) && /\d/.test(value);
     }
 
     function snapshotToRecords(snapshot) {
       const value = snapshot.val();
       if (!value) return [];
       return Object.values(value);
+    }
+
+    function buildLocalSearchIndex(records) {
+      return records.map((record) => {
+        const code = (record.error_code_pattern || '').toUpperCase();
+        const compactRecordCode = compactCode(code);
+
+        return {
+          record,
+          code,
+          compactCode: compactRecordCode,
+          prefix: compactCode(record.pattern_static_prefix || staticPrefix(compactRecordCode))
+        };
+      });
+    }
+
+    function indexedRecordsFor(records) {
+      if (records === cachedRecords) {
+        if (!localSearchIndex) localSearchIndex = buildLocalSearchIndex(records);
+        return localSearchIndex;
+      }
+
+      return buildLocalSearchIndex(records);
+    }
+
+    function setCachedRecords(records, meta) {
+      cachedRecords = records;
+      localSearchIndex = buildLocalSearchIndex(records);
+      browserCacheMeta = meta;
+      searchResultCache.clear();
+    }
+
+    function openErrorCodeCacheDb() {
+      return new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) {
+          reject(new Error('IndexedDB is not available.'));
+          return;
+        }
+
+        const request = indexedDB.open(BROWSER_CACHE_DB, 1);
+
+        request.onupgradeneeded = () => {
+          const database = request.result;
+          if (!database.objectStoreNames.contains(BROWSER_CACHE_STORE)) {
+            database.createObjectStore(BROWSER_CACHE_STORE, { keyPath: 'key' });
+          }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('Failed to open error code cache.'));
+      });
+    }
+
+    async function readRecordsFromBrowserCache() {
+      const database = await openErrorCodeCacheDb();
+
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction(BROWSER_CACHE_STORE, 'readonly');
+        const store = transaction.objectStore(BROWSER_CACHE_STORE);
+        const request = store.get(BROWSER_CACHE_KEY);
+
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error || new Error('Failed to read error code cache.'));
+        transaction.oncomplete = () => database.close();
+        transaction.onerror = () => reject(transaction.error || new Error('Failed to read error code cache.'));
+      });
+    }
+
+    async function writeRecordsToBrowserCache(records) {
+      const database = await openErrorCodeCacheDb();
+
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction(BROWSER_CACHE_STORE, 'readwrite');
+        const store = transaction.objectStore(BROWSER_CACHE_STORE);
+        const savedAt = Date.now();
+        const request = store.put({
+          key: BROWSER_CACHE_KEY,
+          records,
+          savedAt,
+          version: APP_VERSION
+        });
+
+        request.onsuccess = () => resolve({ savedAt, version: APP_VERSION });
+        request.onerror = () => reject(request.error || new Error('Failed to write error code cache.'));
+        transaction.oncomplete = () => database.close();
+        transaction.onerror = () => reject(transaction.error || new Error('Failed to write error code cache.'));
+      });
+    }
+
+    function isBrowserCacheFresh(meta) {
+      return Boolean(
+        meta &&
+        meta.version === APP_VERSION &&
+        meta.savedAt &&
+        Date.now() - meta.savedAt < BROWSER_CACHE_TTL_MS
+      );
+    }
+
+    function rememberSearchResult(term, rows) {
+      if (searchResultCache.has(term)) searchResultCache.delete(term);
+      searchResultCache.set(term, rows);
+
+      if (searchResultCache.size > SEARCH_CACHE_LIMIT) {
+        searchResultCache.delete(searchResultCache.keys().next().value);
+      }
     }
 
     function uniqueRecords(records) {
@@ -625,62 +746,146 @@
     }
 
     function sortRecords(term, records) {
+      const compactTerm = compactCode(term);
+
       return records.sort((a, b) => {
         const aCode = (a.error_code_pattern || '').toUpperCase();
         const bCode = (b.error_code_pattern || '').toUpperCase();
-        const aExact = aCode === term ? 0 : 1;
-        const bExact = bCode === term ? 0 : 1;
+        const aExact = aCode === term || compactCode(aCode) === compactTerm ? 0 : 1;
+        const bExact = bCode === term || compactCode(bCode) === compactTerm ? 0 : 1;
         if (aExact !== bExact) return aExact - bExact;
         if ((b.prefix_length || 0) !== (a.prefix_length || 0)) return (b.prefix_length || 0) - (a.prefix_length || 0);
         return aCode.localeCompare(bCode);
       });
     }
 
+    function filterCodeMatches(term, records) {
+      const compactTerm = compactCode(term);
+
+      return indexedRecordsFor(records)
+        .filter((entry) => entry.code === term ||
+          entry.code.startsWith(term) ||
+          entry.compactCode === compactTerm ||
+          entry.compactCode.startsWith(compactTerm) ||
+          (entry.record.is_pattern && entry.prefix && compactTerm.startsWith(entry.prefix)))
+        .map((entry) => entry.record);
+    }
+
     async function queryCodeMatches(term) {
+      const compactTerm = compactCode(term);
       const queries = [
         errorCodesRef.orderByChild('error_code_pattern').equalTo(term).once('value'),
         errorCodesRef.orderByChild('error_code_pattern').startAt(term).endAt(`${term}\uf8ff`).limitToFirst(200).once('value')
       ];
+
+      if (compactTerm && compactTerm !== term) {
+        queries.push(
+          errorCodesRef.orderByChild('error_code_pattern').equalTo(compactTerm).once('value'),
+          errorCodesRef.orderByChild('error_code_pattern').startAt(compactTerm).endAt(`${compactTerm}\uf8ff`).limitToFirst(200).once('value')
+        );
+      }
 
       prefixCandidates(term).forEach((prefix) => {
         queries.push(errorCodesRef.orderByChild('pattern_static_prefix').equalTo(prefix).once('value'));
       });
 
       const snapshots = await Promise.all(queries);
-      return uniqueRecords(snapshots.flatMap(snapshotToRecords)).filter((record) => {
-        const code = (record.error_code_pattern || '').toUpperCase();
-        const prefix = (record.pattern_static_prefix || staticPrefix(code)).toUpperCase();
-        return code === term ||
-          code.startsWith(term) ||
-          (record.is_pattern && prefix && term.startsWith(prefix));
-      });
+      return filterCodeMatches(term, uniqueRecords(snapshots.flatMap(snapshotToRecords)));
     }
 
-    async function loadAllRecords() {
+    async function refreshAllRecords({ silent = false } = {}) {
+      if (fullDataNetworkPromise) return fullDataNetworkPromise;
+
+      fullDataNetworkPromise = (async () => {
+        if (!silent) statusEl.textContent = 'Refreshing error code cache...';
+        const snapshot = await errorCodesRef.once('value');
+        const records = snapshotToRecords(snapshot);
+        const meta = { savedAt: Date.now(), version: APP_VERSION };
+        setCachedRecords(records, meta);
+
+        writeRecordsToBrowserCache(records)
+          .then((meta) => {
+            browserCacheMeta = meta;
+          })
+          .catch((error) => {
+            console.warn('Failed to save error code cache:', error);
+          });
+
+        if (!records.length) {
+          configWarning.style.display = 'block';
+        }
+
+        return records;
+      })().finally(() => {
+        fullDataNetworkPromise = null;
+      });
+
+      return fullDataNetworkPromise;
+    }
+
+    async function loadAllRecords({ preferCache = true } = {}) {
       if (cachedRecords) return cachedRecords;
-      statusEl.textContent = 'Loading keyword index...';
-      const snapshot = await errorCodesRef.once('value');
-      cachedRecords = snapshotToRecords(snapshot);
-      if (!cachedRecords.length) {
-        configWarning.style.display = 'block';
-      }
-      return cachedRecords;
+      if (cacheLoadPromise) return cacheLoadPromise;
+
+      cacheLoadPromise = (async () => {
+        if (preferCache) {
+          try {
+            const cached = await readRecordsFromBrowserCache();
+            const meta = cached ? { savedAt: cached.savedAt, version: cached.version } : null;
+
+            if (cached && Array.isArray(cached.records) && cached.records.length && isBrowserCacheFresh(meta)) {
+              setCachedRecords(cached.records, meta);
+              return cachedRecords;
+            }
+          } catch (error) {
+            console.warn('Failed to load error code cache:', error);
+          }
+        }
+
+        return refreshAllRecords();
+      })().finally(() => {
+        cacheLoadPromise = null;
+      });
+
+      return cacheLoadPromise;
     }
 
-    async function queryKeywordMatches(term) {
-      const records = await loadAllRecords();
-      return records.filter((record) => {
-        const haystack = [
-          record.error_code_pattern,
-          record.operator_cause,
-          record.operator_recovery,
-          record.service_cause,
-          record.service_recovery,
-          record.service_recovery_all,
-          record.search_text
-        ].join(' ').toUpperCase();
-        return haystack.includes(term);
-      });
+    function scheduleBackgroundRefresh() {
+      if (!hasCompletedSearch || backgroundRefreshScheduled || fullDataNetworkPromise) return;
+      if (cachedRecords && isBrowserCacheFresh(browserCacheMeta)) return;
+
+      backgroundRefreshScheduled = true;
+
+      const refresh = () => {
+        backgroundRefreshScheduled = false;
+        refreshAllRecords({ silent: true }).catch((error) => {
+          console.warn('Failed to refresh error code cache:', error);
+        });
+      };
+
+      window.setTimeout(() => {
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(refresh, { timeout: 5000 });
+        } else {
+          window.setTimeout(refresh, 1200);
+        }
+      }, 600);
+    }
+
+    async function warmErrorCodeCache() {
+      try {
+        const cached = await readRecordsFromBrowserCache();
+        const meta = cached ? { savedAt: cached.savedAt, version: cached.version } : null;
+
+        if (cached && Array.isArray(cached.records) && cached.records.length && isBrowserCacheFresh(meta)) {
+          setCachedRecords(cached.records, meta);
+          if (!queryInput.value.trim()) {
+            statusEl.textContent = `Ready - ${cachedRecords.length} error code(s) cached.`;
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to warm error code cache:', error);
+      }
     }
 
     function isMissingIndexError(error) {
@@ -755,6 +960,16 @@
       `;
     }
 
+    function renderSearchResults(term, rows, source) {
+      searchButton.disabled = false;
+      searchButton.setAttribute('aria-label', 'Search');
+      statusEl.textContent = `${rows.length} result(s)${rows.length === 200 ? ' (showing first 200)' : ''}${source ? ` - ${source}` : ''}`;
+      resultsEl.innerHTML = rows.length ? rows.map(card).join('') : '';
+      if (!rows.length) renderEmpty('No matching error code.');
+      hasCompletedSearch = true;
+      scheduleBackgroundRefresh();
+    }
+
     async function search() {
       const term = normalizeQuery(queryInput.value);
       if (!term) {
@@ -768,27 +983,44 @@
       statusEl.textContent = 'Searching...';
 
       try {
-        const termIsCodeLike = isCodeLike(term);
-        let codeMatches = [];
+        const cachedRows = searchResultCache.get(term);
+        if (cachedRows) {
+          renderSearchResults(term, cachedRows, 'cached');
+          return;
+        }
 
-        if (termIsCodeLike) {
+        const termIsCodeLike = isCodeLike(term);
+        if (!termIsCodeLike) {
+          searchButton.disabled = false;
+          searchButton.setAttribute('aria-label', 'Search');
+          statusEl.textContent = 'Input error code saja.';
+          renderEmpty('Input harus berupa error code.');
+          return;
+        }
+
+        let codeMatches = [];
+        let resultSource = '';
+
+        if (cachedRecords) {
+          codeMatches = filterCodeMatches(term, cachedRecords);
+          resultSource = 'local cache';
+        } else {
           try {
             codeMatches = await queryCodeMatches(term);
           } catch (error) {
             if (!isMissingIndexError(error)) throw error;
             configWarning.style.display = 'block';
-            configWarning.textContent = 'Firebase index belum dipasang. Search tetap berjalan dengan fallback data penuh.';
+            configWarning.textContent = 'Firebase index belum dipasang. Search error code tetap berjalan dengan fallback data penuh.';
+            const records = await loadAllRecords();
+            codeMatches = filterCodeMatches(term, records);
+            resultSource = 'full data';
           }
         }
 
-        const keywordMatches = (!termIsCodeLike || codeMatches.length === 0) ? await queryKeywordMatches(term) : [];
-        const rows = sortRecords(term, uniqueRecords(codeMatches.concat(keywordMatches))).slice(0, 200);
+        const rows = sortRecords(term, uniqueRecords(codeMatches)).slice(0, 200);
+        rememberSearchResult(term, rows);
 
-        searchButton.disabled = false;
-        searchButton.setAttribute('aria-label', 'Search');
-        statusEl.textContent = `${rows.length} result(s)${rows.length === 200 ? ' (showing first 200)' : ''}`;
-        resultsEl.innerHTML = rows.length ? rows.map(card).join('') : '';
-        if (!rows.length) renderEmpty('No matching error code or keyword.');
+        renderSearchResults(term, rows, resultSource);
       } catch (error) {
         console.error(error);
         searchButton.disabled = false;
@@ -809,6 +1041,8 @@
         configWarning.style.display = 'block';
         statusEl.textContent = 'Gagal koneksi Firebase.';
       });
+
+    setTimeout(warmErrorCodeCache, 350);
 
     function clearSearch() {
       queryInput.value = '';
