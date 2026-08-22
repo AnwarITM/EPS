@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="TaskManager" />
   <meta name="mobile-web-app-capable" content="yes" />
   <script>
-    const APP_VERSION = '202608220920';
+    const APP_VERSION = '202608222141';
     const CACHE_PREFIX = 'eps-work-planner-v';
     const SW_URL = `./sw.js?v=${APP_VERSION}`;
     const SW_SCRIPT_URL = new URL(SW_URL, location.href).href;
@@ -345,10 +345,7 @@
 
     .note-body {
       padding: 0 14px 12px;
-      max-height: 0;
-      opacity: 0;
-      overflow: hidden;
-      transition: opacity 0.25s ease, max-height 0.3s ease, padding 0.25s ease;
+      display: none;
     }
 
     .note-meta {
@@ -364,6 +361,8 @@
       color: var(--text-secondary);
       line-height: 1.6;
       white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: break-word;
       font-size: 14px;
       padding-top: 4px;
     }
@@ -371,21 +370,19 @@
     .note-actions {
       display: flex;
       gap: 8px;
-      margin-top: 10px;
+      margin-top: 14px;
       flex-wrap: wrap;
     }
 
     .note-actions button {
-      width: auto;
-      padding: 8px 12px;
+      flex: 1;
+      min-width: 100px;
+      padding: 10px 14px;
       font-size: 13px;
     }
 
     .note-card.open .note-body {
-      max-height: 4000px;
-      opacity: 1;
-      padding-top: 0;
-      overflow: visible;
+      display: block;
     }
 
     #notif {
