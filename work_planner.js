@@ -158,6 +158,16 @@ const app = {
             el.onclick = () => this.switchTab(tab.id);
             container.insertBefore(el, addBtn);
         });
+
+        // Update top header title & document title to active tab name
+        const currentTab = this.getCurrentTab();
+        if (currentTab) {
+            const titleEl = $('#appTitle') || $('.app-title');
+            if (titleEl) {
+                titleEl.textContent = currentTab.name;
+            }
+            document.title = `${currentTab.name} • EPS`;
+        }
     },
 
     switchTab(id) {
