@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
 
   <script>
-    const APP_VERSION = '202609101908';
+    const APP_VERSION = '202609112133';
     const CACHE_PREFIX = 'eps-work-planner-v';
     const SW_URL = `./sw.js?v=${APP_VERSION}`;
     const IS_LOCALHOST = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
@@ -60,10 +60,10 @@
   <link rel="apple-touch-icon" sizes="192x192" href="icon-192x192.png" />
   <link rel="apple-touch-icon" sizes="512x512" href="icon-512x512.png" />
 
-  <link rel="stylesheet" href="design-tokens.css?v=202609101908">
-  <link rel="stylesheet" href="styles.css?v=202609101908">
-  <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202609101908">
-  <script src="theme_manager.js?v=202609101908"></script>
+  <link rel="stylesheet" href="design-tokens.css?v=202609112133">
+  <link rel="stylesheet" href="styles.css?v=202609112133">
+  <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202609112133">
+  <script src="theme_manager.js?v=202609112133"></script>
 
   <style>
     /* ── Page Layout ── */
@@ -754,12 +754,12 @@
       const compact = compactCode(value);
       const prefixes = [];
 
-      for (let index = 1; index <= compact.length; index += 1) {
+      for (let index = 0; index <= compact.length; index += 1) {
         prefixes.push(compact.slice(0, index).replace(/X+$/i, ''));
       }
 
       prefixes.push(staticPrefix(compact));
-      return [...new Set(prefixes.filter((prefix) => prefix.length >= 2))];
+      return [...new Set(prefixes)];
     }
 
     function isCodeLike(value) {
@@ -978,6 +978,25 @@
       return cacheLoadPromise;
     }
 
+    async function loadMatchingRecords(term) {
+      if (cachedRecords && isBrowserCacheFresh(browserCacheMeta)) {
+        return { records: cachedRecords, source: 'cache_browser' };
+      }
+      if (!errorCodesRef) throw new Error('Firebase database tidak tersedia.');
+
+      const code = compactCode(term);
+      // Fetch only this code/prefix and its possible wildcard parents.
+      // Both child fields must have .indexOn in Firebase rules.
+      const queries = [
+        errorCodesRef.orderByChild('error_code_pattern')
+          .startAt(code).endAt(`${code}\uf8ff`),
+        ...prefixCandidates(code).map((prefix) =>
+          errorCodesRef.orderByChild('pattern_static_prefix').equalTo(prefix))
+      ];
+      const snapshots = await Promise.all(queries.map((query) => query.once('value')));
+      return { records: uniqueRecords(snapshots.flatMap(snapshotToRecords)), source: 'firebase' };
+    }
+
     function scheduleBackgroundRefresh() {
       if (!hasCompletedSearch || backgroundRefreshScheduled || fullDataNetworkPromise) return;
       if (cachedRecords && isBrowserCacheFresh(browserCacheMeta)) return;
@@ -1138,9 +1157,8 @@
           return;
         }
 
-        const records = await loadAllRecords();
+        const { records, source: resultSource } = await loadMatchingRecords(term);
         const codeMatches = filterCodeMatches(term, records);
-        const resultSource = browserCacheMeta?.source || 'lokal';
 
         const rows = sortRecords(term, uniqueRecords(codeMatches)).slice(0, 200);
         rememberSearchResult(term, rows);
