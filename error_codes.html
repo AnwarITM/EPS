@@ -914,31 +914,8 @@
         .map((entry) => entry.record);
     }
 
-    async function queryCodeMatches(term) {
-      if (!errorCodesRef) {
-        throw new Error('Firebase fallback tidak tersedia.');
-      }
 
-      const compactTerm = compactCode(term);
-      const queries = [
-        errorCodesRef.orderByChild('error_code_pattern').equalTo(term).once('value'),
-        errorCodesRef.orderByChild('error_code_pattern').startAt(term).endAt(`${term}\uf8ff`).limitToFirst(200).once('value')
-      ];
 
-      if (compactTerm && compactTerm !== term) {
-        queries.push(
-          errorCodesRef.orderByChild('error_code_pattern').equalTo(compactTerm).once('value'),
-          errorCodesRef.orderByChild('error_code_pattern').startAt(compactTerm).endAt(`${compactTerm}\uf8ff`).limitToFirst(200).once('value')
-        );
-      }
-
-      prefixCandidates(term).forEach((prefix) => {
-        queries.push(errorCodesRef.orderByChild('pattern_static_prefix').equalTo(prefix).once('value'));
-      });
-
-      const snapshots = await Promise.all(queries);
-      return filterCodeMatches(term, uniqueRecords(snapshots.flatMap(snapshotToRecords)));
-    }
 
     async function refreshAllRecords({ silent = false } = {}) {
       if (fullDataNetworkPromise) return fullDataNetworkPromise;
@@ -1039,11 +1016,8 @@
       }
     }
 
-    function isMissingIndexError(error) {
-      return String(error && error.message ? error.message : error).toLowerCase().includes('index not defined');
-    }
 
-    /* ── Toggle accordion ── */
+
     function toggleCard(button) {
       const card = button.closest('.acc-card');
       card.classList.toggle('open');
@@ -1164,24 +1138,9 @@
           return;
         }
 
-        let codeMatches = [];
-        let resultSource = '';
-
-        if (cachedRecords) {
-          codeMatches = filterCodeMatches(term, cachedRecords);
-          resultSource = 'cache lokal';
-        } else {
-          try {
-            codeMatches = await queryCodeMatches(term);
-          } catch (error) {
-            if (!isMissingIndexError(error)) throw error;
-            configWarning.style.display = 'block';
-            configWarning.textContent = 'Index Firebase belum dipasang. Pencarian error code tetap berjalan dengan fallback data penuh.';
-            const records = await loadAllRecords();
-            codeMatches = filterCodeMatches(term, records);
-            resultSource = 'data penuh';
-          }
-        }
+        const records = await loadAllRecords();
+        const codeMatches = filterCodeMatches(term, records);
+        const resultSource = browserCacheMeta?.source || 'lokal';
 
         const rows = sortRecords(term, uniqueRecords(codeMatches)).slice(0, 200);
         rememberSearchResult(term, rows);
