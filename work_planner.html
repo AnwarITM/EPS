@@ -16,7 +16,7 @@
     <meta name="apple-mobile-web-app-title" content="TaskManager" />
     <meta name="mobile-web-app-capable" content="yes" />
     <script>
-        const APP_VERSION = '202609112133';
+        const APP_VERSION = '202609140623';
         const CACHE_PREFIX = 'eps-work-planner-v';
         const SW_URL = `./sw.js?v=${APP_VERSION}`;
         const SW_SCRIPT_URL = new URL(SW_URL, location.href).href;
@@ -64,11 +64,11 @@
     <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="design-tokens.css?v=202609112133">
-    <link rel="stylesheet" href="styles.css?v=202609112133">
-    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202609112133">
-    <script src="theme_manager.js?v=202609112133"></script>
-    <script src="custom_dialogs.js?v=202609112133"></script>
+    <link rel="stylesheet" href="design-tokens.css?v=202609140623">
+    <link rel="stylesheet" href="styles.css?v=202609140623">
+    <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202609140623">
+    <script src="theme_manager.js?v=202609140623"></script>
+    <script src="custom_dialogs.js?v=202609140623"></script>
 
     <!-- Excel Parser -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
@@ -82,6 +82,44 @@
             align-items: center;
             border-bottom: 1px solid var(--surface-border);
         }
+
+        /* Studio workspace treatment. Accent colours are derived from every active theme. */
+        .planner-welcome {
+            --planner-surface: color-mix(in srgb, var(--primary-color) 82%, #10261d);
+            --planner-accent: color-mix(in srgb, var(--primary-color) 22%, white);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-6);
+            min-height: 178px;
+            margin: 0 0 var(--space-6);
+            padding: clamp(24px, 4vw, 36px);
+            overflow: hidden;
+            border-radius: 22px;
+            color: #fff;
+            background: var(--planner-surface);
+            box-shadow: var(--shadow-md);
+        }
+        .planner-welcome::after { content: ''; position: absolute; width: 270px; aspect-ratio: 1; right: -85px; top: -145px; border: 1px solid #ffffff17; border-radius: 50%; box-shadow: 0 0 0 38px #ffffff08, 0 0 0 76px #ffffff06; }
+        .planner-welcome-copy { position: relative; z-index: 1; }
+        .planner-kicker { margin: 0 0 12px; color: #ffffffb8; font-size: 10px; font-weight: 700; letter-spacing: .15em; }
+        .planner-welcome h1 { margin: 0; font-size: clamp(26px, 4vw, 38px); line-height: 1.12; letter-spacing: -.05em; }
+        .planner-welcome h1 span { color: var(--planner-accent); }
+        .planner-welcome p { max-width: 460px; margin: 12px 0 0; color: #ffffffc9; font-size: var(--font-size-sm); line-height: 1.7; }
+        .planner-art { position: relative; z-index: 1; flex: 0 0 156px; padding: 16px; border-radius: 13px; color: var(--text-color); background: #fbfcf6; box-shadow: 0 16px 36px #0c231733; transform: rotate(-5deg); }
+        .planner-art strong { display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #dfe7d8; font-size: 11px; }
+        .planner-art i { display: block; height: 7px; margin-top: 12px; border-radius: 99px; background: #e0e8d7; }
+        .planner-art i:first-of-type { width: 88%; background: color-mix(in srgb, var(--primary-color) 25%, white); }
+        .planner-art i:nth-of-type(2) { width: 70%; }
+        .planner-art i:nth-of-type(3) { width: 78%; }
+        .app-shell { max-width: 1080px; margin: 0 auto; }
+        .app-header { padding: 0 0 var(--space-4); margin-bottom: var(--space-4); }
+        .metric-card, .controls-card, .table-responsive { border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm); }
+        .metric-card { aspect-ratio: auto; min-height: 108px; border-radius: 18px; }
+        .controls-card { border-radius: 18px; }
+        .table-responsive { border-radius: 18px; }
+        @media (max-width: 600px) { .planner-welcome { min-height: 230px; align-items: flex-start; } .planner-art { position: absolute; right: -35px; bottom: -16px; opacity: .78; transform: rotate(-10deg) scale(.8); } .planner-welcome p { max-width: 65%; font-size: 12px; } }
 
         .app-title {
             font-size: var(--font-size-lg);
@@ -359,6 +397,14 @@
         </div>
 
         <div class="app-shell">
+            <section class="planner-welcome" aria-labelledby="plannerWelcomeTitle">
+                <div class="planner-welcome-copy">
+                    <p class="planner-kicker">WORK PLANNER</p>
+                    <h1 id="plannerWelcomeTitle">Rencana rapi.<br><span>Kerja lebih pasti.</span></h1>
+                    <p>Susun kunjungan, kelola WSID, dan tuntaskan pekerjaan satu per satu.</p>
+                </div>
+                <div class="planner-art" aria-hidden="true"><strong>My work plan <span>CE</span></strong><i></i><i></i><i></i></div>
+            </section>
             <header class="app-header">
                 <div id="appTitle" class="app-title" style="cursor: pointer;" onclick="app.renameTab()" title="Klik untuk ubah nama tab">Work Planner</div>
                 <div style="display: flex; gap: var(--space-2);">
@@ -498,6 +544,7 @@
                 <button class="btn btn-secondary btn-compact" onclick="closeThemeModal()">✕</button>
             </div>
             <div class="theme-grid">
+                <div class="theme-option" onclick="selectTheme('studio')"><div class="theme-preview" style="background: #245b47;"></div><span>Studio</span></div>
                 <div class="theme-option" onclick="selectTheme('default')">
                     <div class="theme-preview" style="background: #FF0036;"></div>
                     <span>Default</span>
@@ -574,7 +621,7 @@
     <!-- Drag and Drop Library -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
-    <script src="work_planner.js?v=202609112133"></script>
+    <script src="work_planner.js?v=202609140623"></script>
     <script>
         function openThemeModal() {
             document.getElementById('themeModal').style.display = 'flex';

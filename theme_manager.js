@@ -5,9 +5,10 @@
 
 const THEME_KEY = 'eps_theme_pref';
 const APP_SEMANTIC_VERSION = '1.2.0';
-const THEME_VERSION = '202609112133';
+const THEME_VERSION = '202609140623';
 
 const THEME_MANIFEST = {
+    'studio': `theme-studio.css?v=${THEME_VERSION}`,
     'default': `theme-default.css?v=${THEME_VERSION}`,
     'linear': `theme-linear.css?v=${THEME_VERSION}`,
     'vercel': `theme-vercel.css?v=${THEME_VERSION}`,
@@ -17,6 +18,7 @@ const THEME_MANIFEST = {
 };
 
 const THEME_COLORS = {
+    'studio': '#245B47',
     'default': '#FF0036',
     'linear': '#5e6ad2',
     'vercel': '#000000',
@@ -58,8 +60,43 @@ function appendVersionFooter() {
     }
 }
 
+function ensureStudioThemeOption() {
+    document.querySelectorAll('.theme-grid').forEach((grid) => {
+        if (grid.querySelector('[data-theme-choice="studio"], [onclick*="selectTheme(\'studio\')"]')) return;
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'theme-option';
+        option.dataset.themeChoice = 'studio';
+        option.innerHTML = '<span class="theme-preview" style="background:#245b47"></span><span>Studio</span>';
+        option.addEventListener('click', () => setGlobalTheme('studio'));
+        grid.prepend(option);
+    });
+}
+
+function enhanceNavigation() {
+    const nav = document.querySelector('.bottom-nav');
+    if (!nav || nav.dataset.epsEnhanced) return;
+    nav.dataset.epsEnhanced = 'true';
+    nav.setAttribute('aria-label', 'Navigasi utama');
+    const logo = '<span class="eps-logo-mark"><svg class="eps-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 12h10M5 18h14m-3-9 3 3-3 3"/></svg></span><span>eps<small>ENGINEER WORKSPACE</small></span>';
+    nav.insertAdjacentHTML('afterbegin', `<a class="eps-logo" href="index.html" aria-label="EPS beranda">${logo}</a><div class="eps-nav-heading">WORKSPACE</div>`);
+    nav.insertAdjacentHTML('beforeend', '<div class="eps-nav-foot">Untuk setiap langkah<br>di lapangan.<br><span>EPS · Customer Engineer</span></div>');
+    const labels = { Home: 'Beranda', Notes: 'Catatan', Error: 'Error Codes', Settings: 'Tampilan' };
+    nav.querySelectorAll('.nav-link').forEach((link) => {
+        const label = link.querySelector('span:last-child');
+        if (label && labels[label.textContent.trim()]) label.textContent = labels[label.textContent.trim()];
+        if (link.classList.contains('active')) link.setAttribute('aria-current', 'page');
+    });
+}
+
 // Function to update UI state based on theme
 function updateThemeUI(themeId) {
+    document.documentElement.dataset.theme = themeId;
+    document.documentElement.style.colorScheme = DARK_THEMES.includes(themeId) ? 'dark' : 'light';
+    window.dispatchEvent(new CustomEvent('eps:theme-change', { detail: { themeId } }));
+    document.querySelectorAll('[data-theme-choice]').forEach((option) => {
+        option.setAttribute('aria-pressed', String(option.dataset.themeChoice === themeId));
+    });
     const isDark = DARK_THEMES.includes(themeId);
     
     // Update the new toggle switch if it exists
@@ -85,7 +122,7 @@ function updateThemeUI(themeId) {
 
 // Function to immediately apply theme (can be called in head)
 function applyTheme() {
-    let saved = localStorage.getItem(THEME_KEY) || 'default';
+    let saved = localStorage.getItem(THEME_KEY) || 'studio';
     
     // Migration logic: if saved value contains '.css', map it to an ID or reset
     if (saved.includes('.css')) {
@@ -107,6 +144,7 @@ function applyTheme() {
     if (link) {
         link.setAttribute('href', themeFile);
     }
+    document.documentElement.dataset.theme = saved;
     updateMetaThemeColor(saved);
 
     // Defer UI update slightly to ensure DOM is ready if script runs in head
@@ -139,7 +177,11 @@ function toggleGlobalTheme() {
 }
 
 // Apply on load
-document.addEventListener('DOMContentLoaded', applyTheme);
+document.addEventListener('DOMContentLoaded', () => {
+    ensureStudioThemeOption();
+    enhanceNavigation();
+    applyTheme();
+});
 
 // Also apply immediately if possible to prevent flash
 applyTheme();

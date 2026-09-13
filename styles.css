@@ -400,3 +400,41 @@ textarea.cell-edit::placeholder {
     background: rgba(255, 255, 255, 0.12);
     color: #ffffff;
 }
+
+/* EPS Studio shell: shared across the home page and every tool. */
+:root { --eps-sidebar-width: 216px; }
+button, input, select, textarea { font: inherit; }
+:where(a, button, input, select, textarea, [tabindex]):focus-visible { outline: 3px solid var(--outline-color, var(--primary-color)); outline-offset: 3px; }
+.skip-link { position: fixed; top: 12px; left: 16px; z-index: 10000; padding: 12px 20px; background: var(--surface-1); color: var(--text-color); border-radius: 12px; transform: translateY(-160%); }
+.skip-link:focus { transform: translateY(0); }
+.eps-icon { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+.eps-logo { display: flex; align-items: center; gap: 11px; color: var(--text-color); text-decoration: none; font-size: 27px; font-weight: 750; letter-spacing: -1.5px; }
+.eps-logo-mark { display: grid; place-items: center; width: 38px; height: 38px; background: var(--primary-color); color: color-mix(in srgb, var(--primary-text) 75%, var(--primary-color)); border-radius: 12px; }
+.eps-logo small { display: block; margin-top: 1px; font-size: 10px; font-weight: 500; color: var(--text-secondary); letter-spacing: .3px; }
+.eps-nav-heading { padding: 30px 15px 12px; color: var(--text-muted); font-size: 10px; letter-spacing: 1.5px; font-weight: 600; }
+.eps-nav-foot { margin-top: auto; padding: 20px 13px 4px; color: var(--text-muted); font-size: 11px; line-height: 1.7; }
+.bottom-nav .nav-link { font-family: inherit; cursor: pointer; border: 0; background: transparent; color: var(--text-secondary); transition: background .18s, color .18s; text-decoration: none; }
+.bottom-nav .nav-link:hover { background: var(--surface-2); color: var(--text-color); }
+.bottom-nav .nav-link.active { background: var(--surface-2); color: var(--text-color); font-weight: 650; }
+.bottom-nav .nav-icon svg { stroke-width: 1.7; }
+.eps-context { display: flex; gap: 10px; align-items: center; padding: 4px 0 24px; font-size: 12px; color: var(--text-secondary); }
+.eps-context a { color: inherit; text-decoration: none; }
+.eps-context span:last-child { color: var(--text-color); }
+.theme-option { color: var(--text-color); text-align: left; font: inherit; }
+.theme-option[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--primary-color); }
+@media (min-width: 1050px) {
+  body { padding-left: var(--eps-sidebar-width); padding-bottom: 0; }
+  .bottom-nav { position: fixed; inset: 0 auto 0 0; width: var(--eps-sidebar-width); height: 100dvh; padding: 30px 18px 20px; display: flex; flex-direction: column; justify-content: flex-start; gap: 6px; border: 0; border-right: 1px solid var(--surface-border); background: var(--surface-1); box-shadow: none; border-radius: 0; }
+  .bottom-nav .eps-logo { margin: 0 10px; }
+  .bottom-nav .nav-link { flex: 0 0 auto; flex-direction: row; justify-content: flex-start; gap: 13px; width: 100%; min-height: 46px; padding: 12px 15px; border-radius: 10px; font-size: 13px; }
+  .bottom-nav button.nav-link { margin-top: 20px; }
+  .bottom-nav .nav-icon { width: 20px; height: 20px; margin: 0; }
+  body > .container { max-width: 1400px; padding: 32px 40px; }
+}
+@media (max-width: 1049px) {
+  body { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+  .bottom-nav { left: 12px; right: 12px; bottom: max(10px, env(safe-area-inset-bottom)); width: auto; height: 68px; padding: 5px; border: 1px solid var(--surface-border); border-radius: 20px; background: color-mix(in srgb, var(--bg-color) 92%, transparent); box-shadow: 0 8px 36px #16261915; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+  .bottom-nav .nav-link { padding: 8px 2px; border-radius: 14px; min-width: 0; min-height: 54px; font-size: 10px; gap: 4px; }
+  .bottom-nav .eps-logo, .eps-nav-heading, .eps-nav-foot { display: none; }
+  .bottom-nav .nav-icon { width: 20px; height: 20px; margin: 0; }
+}

@@ -1,0 +1,38 @@
+:root {
+  --bg-color: #f5f6f3;
+  --text-color: #202c29;
+  --text-secondary: #58645e;
+  --text-muted: #68756e;
+  --primary-color: #245b47;
+  --primary-hover: #194431;
+  --primary-text: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #eef2ec;
+  --surface-3: #e2e9df;
+  --surface-muted: #f3f5f0;
+  --surface-soft: #f8faf6;
+  --surface-strong: #ffffff;
+  --surface-elevated: #ffffff;
+  --gradient-primary: linear-gradient(120deg, #245b47, #34745b);
+  --gradient-bg: #f5f6f3;
+  --border-subtle: #e1e6dd;
+  --surface-border: var(--border-subtle);
+  --border-shadow: 0 0 0 1px var(--border-subtle);
+  --shadow-sm: 0 2px 3px #233c260d;
+  --shadow-md: 0 4px 18px #233c2610;
+  --shadow-lg: 0 16px 48px #233c2612;
+  --shadow-focus: 0 0 0 4px #245b4725;
+  --success-color: #28734e;
+  --danger-color: #bd364b;
+  --warning-color: #926512;
+  --status-done-bg: #e9f3e8;
+  --status-done-text: #245b47;
+  --status-done-border: #c9dfc4;
+  --status-outstanding-bg: #fff4e5;
+  --status-outstanding-text: #875414;
+  --status-outstanding-border: #eed9b8;
+  --theme-toggle-bg: #ffffff;
+  --theme-toggle-border: #245b47;
+  --button-primary-text: #ffffff;
+  --outline-color: #245b47;
+}

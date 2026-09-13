@@ -1,334 +1,54 @@
-<!DOCTYPE html>
-<html lang="en">
-
+<!doctype html>
+<html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Task Manager CE</title>
-
-  <!-- PWA Meta -->
-  <meta name="theme-color" content="#0070f3" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="TaskManager" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  
-  <script>
-    const APP_VERSION = '202609112133';
-    const CACHE_PREFIX = 'eps-work-planner-v';
-    const SW_URL = `./sw.js?v=${APP_VERSION}`;
-    const SW_SCRIPT_URL = new URL(SW_URL, location.href).href;
-    const IS_LOCALHOST = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
-    const CAN_LOAD_MANIFEST = location.protocol === 'http:' || location.protocol === 'https:';
-    const CAN_USE_SERVICE_WORKER = location.protocol === 'https:' || IS_LOCALHOST;
-
-    if (CAN_LOAD_MANIFEST) {
-      const manifestLink = document.createElement('link');
-      manifestLink.rel = 'manifest';
-      manifestLink.href = 'manifest.json';
-      document.head.appendChild(manifestLink);
-    }
-
-    if (CAN_USE_SERVICE_WORKER && 'caches' in window) {
-      const savedVersion = localStorage.getItem('eps-app-version');
-      const alreadyRefreshed = sessionStorage.getItem('eps-version-refreshed');
-
-      if (savedVersion !== APP_VERSION && !alreadyRefreshed) {
-        caches.keys()
-          .then((names) => Promise.all(
-            names
-              .filter((name) => name.startsWith(CACHE_PREFIX) && name !== `${CACHE_PREFIX}${APP_VERSION}`)
-              .map((name) => caches.delete(name))
-          ))
-          .finally(() => {
-            localStorage.setItem('eps-app-version', APP_VERSION);
-            sessionStorage.setItem('eps-version-refreshed', 'yes');
-            window.location.reload();
-          });
-      }
-    }
-
-    if (CAN_USE_SERVICE_WORKER && 'serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register(SW_URL).catch((error) => {
-          console.error('Service worker registration failed:', error);
-        });
-      });
-    }
-  </script>
-
-  <!-- Favicon and Icons -->
-  <link rel="icon" type="image/png" sizes="16x16" href="icon-16x16.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png" />
-  <link rel="apple-touch-icon" sizes="192x192" href="icon-192x192.png" />
-  <link rel="apple-touch-icon" sizes="512x512" href="icon-512x512.png" />
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="design-tokens.css?v=202609112133">
-  <link rel="stylesheet" href="styles.css?v=202609112133">
-  <link id="theme-link" rel="stylesheet" href="theme-light.css?v=202609112133">
-  <script src="theme_manager.js?v=202609112133"></script>
-  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#245b47">
+  <meta name="description" content="Workspace Customer Engineer untuk planner, catatan teknis, lokasi mesin, dan error codes.">
+  <title>EPS · Engineer Workspace</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-32x32.png">
+  <link rel="apple-touch-icon" href="icon-192x192.png">
+  <link rel="stylesheet" href="design-tokens.css?v=202609140623">
+  <link rel="stylesheet" href="styles.css?v=202609140623">
+  <link id="theme-link" rel="stylesheet" href="theme-studio.css?v=202609140623">
+  <script src="theme_manager.js?v=202609140623"></script>
   <style>
-    .hero-card {
-      background: var(--surface-1);
-      border-radius: var(--radius-xl);
-      padding: var(--space-8) var(--space-8) var(--space-6);
-      box-shadow: var(--shadow-lg);
-      margin-top: var(--space-4);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-4);
-      position: relative;
-    }
-
-    .hero-main {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: var(--space-6);
-    }
-
-    .hero-title {
-      font-size: clamp(28px, 7vw, 40px);
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      margin: 0;
-      background: var(--gradient-primary);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    /* Theme Selection Grid */
-    .theme-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: var(--space-3);
-    }
-
-    .theme-option {
-      background: var(--surface-2);
-      border: 1px solid var(--surface-border);
-      border-radius: var(--radius-md);
-      padding: var(--space-3);
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      cursor: pointer;
-      transition: var(--transition-base);
-    }
-
-    .theme-option:hover {
-      background: var(--surface-3);
-      transform: translateY(-2px);
-    }
-
-    .theme-preview {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 2px solid #fff;
-      box-shadow: 0 0 0 1px var(--surface-border);
-    }
-
-    .app-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: var(--space-4);
-      margin-top: var(--space-6);
-    }
-
-    .app-card {
-      background: var(--surface-1);
-      border-radius: var(--radius-lg);
-      padding: var(--space-6);
-      box-shadow: var(--shadow-md);
-      text-decoration: none;
-      color: inherit;
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-4);
-      transition: var(--transition-base);
-    }
-
-    .app-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .app-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-    }
-
-    .app-icon--planner { background: var(--gradient-primary); }
-    .app-icon--notes { background: linear-gradient(135deg, #7928ca, #ff0080); }
-    .app-icon--overtime { background: linear-gradient(135deg, #f5a623, #ff4d4d); }
-    .app-icon--error { background: linear-gradient(135deg, #17365d, #3ecf8e); }
-
-    .app-title {
-      font-size: var(--font-size-lg);
-      font-weight: 600;
-    }
-
-    .app-desc {
-      color: var(--text-secondary);
-      font-size: var(--font-size-sm);
-    }
-
-    @media (max-width: 640px) {
-      .hero-main { flex-direction: column; }
-      .hero-actions { flex-direction: column; }
-      .hero-actions .btn { width: 100%; }
-      .hero-card { padding: var(--space-6); }
-    }
+    .eps-home .container { max-width: 1180px; }
+    .home-topbar { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:22px; border-bottom:1px solid var(--surface-border); }
+    .home-breadcrumb { display:flex; align-items:center; gap:9px; color:var(--text-muted); font-size:12px; }
+    .home-breadcrumb strong { color:var(--text-color); font-weight:600; }
+    .home-actions { display:flex; align-items:center; gap:10px; }
+    .command-trigger { display:flex; align-items:center; gap:9px; min-height:38px; padding:8px 10px; border:1px solid var(--surface-border); border-radius:9px; background:var(--surface-1); color:var(--text-secondary); cursor:pointer; font-size:11px; }
+    .command-trigger .eps-icon { width:16px; height:16px; }.command-trigger kbd { margin-left:20px; padding:2px 5px; border:1px solid var(--surface-border); border-radius:4px; color:var(--text-muted); font:10px inherit; }
+    .profile-badge { display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:var(--primary-color); color:var(--primary-text); font-size:10px; font-weight:700; }
+    .home-intro { display:flex; justify-content:space-between; gap:30px; padding:38px 0 31px; }.eyebrow { color:var(--text-muted); font-size:10px; font-weight:700; letter-spacing:1.5px; }.status-dot { display:inline-block; width:7px; height:7px; margin-right:7px; border-radius:50%; background:var(--primary-color); }
+    .home-intro h1 { margin:11px 0 8px; font-size:clamp(31px,4vw,49px); line-height:1.05; letter-spacing:-.06em; font-weight:650; }.home-intro p { color:var(--text-secondary); font-size:14px; }.today-label { display:flex; align-items:center; gap:9px; align-self:flex-end; color:var(--text-secondary); font-size:12px; }.today-label .eps-icon { width:17px; height:17px; }
+    .workspace-grid { display:grid; grid-template-columns:1.6fr .85fr; gap:18px; }.planner-feature { position:relative; display:flex; justify-content:space-between; gap:20px; min-height:290px; padding:31px; overflow:hidden; border-radius:22px; color:var(--primary-text); background:linear-gradient(135deg, color-mix(in srgb,var(--primary-color) 88%,#10261d),var(--primary-color)); box-shadow:var(--shadow-lg); }.planner-feature::after { content:''; position:absolute; width:330px; height:330px; right:-112px; top:-174px; border:1px solid #ffffff2e; border-radius:50%; box-shadow:0 0 0 42px #ffffff11,0 0 0 84px #ffffff0a; }.planner-copy { position:relative; z-index:1; }.planner-feature .eyebrow { color:#ffffffb8; }.planner-feature h2 { margin:18px 0 0; font-size:clamp(28px,3vw,41px); line-height:1.08; letter-spacing:-.06em; }.planner-feature h2 span { color:color-mix(in srgb,var(--primary-text) 70%,var(--primary-color)); }.planner-feature p { max-width:275px; margin:15px 0 23px; color:#ffffffcf; font-size:12px; line-height:1.75; }.home-primary { display:inline-flex; align-items:center; gap:17px; min-height:43px; padding:11px 15px; border-radius:9px; background:var(--surface-1); color:var(--primary-color); text-decoration:none; font-size:12px; font-weight:700; }.home-primary .eps-icon { width:16px; height:16px; }
+    .planner-art { position:relative; z-index:1; align-self:center; width:185px; padding:18px; border-radius:14px; background:var(--surface-1); color:var(--text-color); box-shadow:0 16px 36px #0c231733; transform:rotate(-6deg); }.planner-art strong { display:flex; justify-content:space-between; padding-bottom:12px; border-bottom:1px solid var(--surface-border); font-size:11px; }.planner-art i { display:block; height:7px; margin-top:14px; border-radius:99px; background:var(--surface-3); }.planner-art i:first-of-type { width:87%; background:color-mix(in srgb,var(--primary-color) 28%,var(--surface-1)); }.planner-art i:nth-of-type(2){width:66%}.planner-art i:nth-of-type(3){width:77%}
+    .day-card { display:flex; flex-direction:column; padding:25px; border:1px solid var(--surface-border); border-radius:22px; background:var(--surface-1); }.day-top,.day-bottom { display:flex; justify-content:space-between; align-items:center; color:var(--text-secondary); font-size:11px; }.day-top span:last-child { padding:4px 8px; border-radius:6px; background:var(--surface-2); }.day-date { display:flex; align-items:center; gap:14px; margin:15px 0; }.day-number { font-size:61px; line-height:1; letter-spacing:-.08em; }.day-month { color:var(--text-secondary); font-size:12px; line-height:1.7; }.week-strip { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:18px; }.week-day { display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px 1px; border-radius:9px; color:var(--text-secondary); font-size:10px; }.week-day b { color:var(--text-color); font-size:11px; }.week-day.today { background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--surface-border); }.week-day.today b{color:var(--primary-color)}.day-bottom { margin-top:auto; padding-top:16px; border-top:1px solid var(--surface-border); color:var(--text-color); text-decoration:none; }
+    .tools-heading { display:flex; justify-content:space-between; align-items:baseline; margin:31px 0 15px; }.tools-heading h2 { font-size:15px; }.tools-heading span { color:var(--text-muted); font-size:11px; }.tools-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }.tool-card { display:flex; flex-direction:column; min-height:230px; padding:21px; border:1px solid var(--surface-border); border-radius:18px; background:var(--surface-1); color:var(--text-color); text-decoration:none; transition:.2s; }.tool-card:hover { transform:translateY(-4px); box-shadow:var(--shadow-lg); }.tool-card-top { display:flex; justify-content:space-between; margin-bottom:15px; }.tool-icon { display:grid; place-items:center; width:39px; height:39px; border-radius:12px; background:color-mix(in srgb,var(--primary-color) 12%,var(--surface-1)); color:var(--primary-color); }.tool-icon .eps-icon { width:20px; height:20px; }.tool-arrow { width:16px; height:16px; color:var(--text-muted); }.tool-card h3 { margin:0 0 6px; font-size:17px; }.tool-card p { margin:0; color:var(--text-secondary); font-size:11px; line-height:1.7; }.tool-visual { display:flex; align-items:center; gap:10px; min-height:58px; margin-top:auto; padding:12px; border-radius:9px; background:var(--surface-muted); color:var(--text-secondary); font-size:10px; }.tool-visual code { color:var(--text-color); font-weight:700; }.home-footer { display:flex; justify-content:space-between; gap:15px; margin-top:24px; padding:18px 2px; border-top:1px solid var(--surface-border); color:var(--text-muted); font-size:11px; }.quiet-button { border:0; background:transparent; color:var(--text-secondary); cursor:pointer; text-decoration:underline; text-underline-offset:4px; }
+    .home-dialog { width:calc(100% - 32px); max-width:510px; margin:auto; padding:24px; border:1px solid var(--surface-border); border-radius:20px; background:var(--bg-color); color:var(--text-color); box-shadow:var(--shadow-lg); }.home-dialog::backdrop { background:#14201966; backdrop-filter:blur(5px); }.dialog-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }.dialog-heading h2 { font-size:18px; }.icon-button { display:grid; place-items:center; min-width:36px; min-height:36px; border:1px solid var(--surface-border); border-radius:9px; background:var(--surface-1); color:var(--text-secondary); cursor:pointer; }.command-input { width:100%; padding:13px; border:1px solid var(--surface-border); border-radius:10px; background:var(--surface-1); color:var(--text-color); }.command-results { display:grid; gap:5px; padding-top:14px; }.command-result { display:flex; justify-content:space-between; padding:13px; border-radius:10px; color:var(--text-color); text-decoration:none; }.command-result:hover { background:var(--surface-2); }.command-result small { display:block; margin-top:4px; color:var(--text-secondary); }.search-hint { margin-top:15px; color:var(--text-muted); font-size:11px; }
+    @media(max-width:760px){.workspace-grid{grid-template-columns:1fr}.tools-grid{grid-template-columns:1fr 1fr}.planner-feature{min-height:270px}.planner-art{position:absolute;right:-38px;bottom:-15px;width:150px;opacity:.8}.today-label{display:none}.home-intro{padding-top:27px}.tool-card:last-child{grid-column:span 2}.home-footer{flex-wrap:wrap}}@media(max-width:480px){.eps-home .container{padding:20px 18px 6px}.home-breadcrumb{display:none}.command-trigger span,.command-trigger kbd{display:none}.command-trigger{width:40px;justify-content:center}.tools-grid{gap:12px}.tool-card{min-height:205px;padding:16px}.tool-card h3{font-size:15px}.tool-card p{font-size:10px}.planner-feature{padding:25px 22px}.planner-feature h2{font-size:31px}}
   </style>
 </head>
-
-<body>
-  <div class="container">
-    <div class="hero-card">
-      <div class="hero-main">
-        <h1 class="hero-title">
-          <span data-seasonal-title style="cursor: pointer;">TASK MANAGER CE</span>
-        </h1>
-      </div>
-    </div>
-
-    <!-- Theme Modal -->
-    <div id="themeModal" class="modal-overlay" onclick="if(event.target==this)closeThemeModal()" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1000; padding: var(--space-4);">
-      <div class="modal-content" style="background: var(--bg-color); border-radius: var(--radius-xl); padding: var(--space-8); width: 100%; max-width: 440px; box-shadow: var(--shadow-lg);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">
-          <h3 style="margin: 0;">Pilih Tema</h3>
-          <button class="btn btn-secondary btn-compact" onclick="closeThemeModal()">✕</button>
-        </div>
-        <div class="theme-grid">
-          <div class="theme-option" onclick="selectTheme('default')">
-            <div class="theme-preview" style="background: #FF0036;"></div>
-            <span>Default</span>
-          </div>
-          <div class="theme-option" onclick="selectTheme('linear')">
-            <div class="theme-preview" style="background: #5e6ad2;"></div>
-            <span>Linear</span>
-          </div>
-          <div class="theme-option" onclick="selectTheme('vercel')">
-            <div class="theme-preview" style="background: #000000;"></div>
-            <span>Vercel</span>
-          </div>
-          <div class="theme-option" onclick="selectTheme('apple')">
-            <div class="theme-preview" style="background: #0066cc;"></div>
-            <span>Apple</span>
-          </div>
-          <div class="theme-option" onclick="selectTheme('supabase')">
-            <div class="theme-preview" style="background: #3ecf8e;"></div>
-            <span>Supabase</span>
-          </div>
-          <div class="theme-option" onclick="selectTheme('liquid-glass')">
-            <div class="theme-preview" style="background: linear-gradient(135deg, #0f172a, #4c1d95); border: 1px solid rgba(255,255,255,0.4);"></div>
-            <span>Liquid Glass</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-top: var(--space-8);">
-      <h2 style="font-size: var(--font-size-xl); font-weight: 700; margin-bottom: var(--space-4); letter-spacing: -0.02em;">Field Tools</h2>
-      <div class="app-grid">
-        <a href="work_planner.html" class="app-card">
-          <div class="app-icon app-icon--planner">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          </div>
-          <div>
-            <p class="app-title">Work Planner</p>
-            <p class="app-desc">Task management and WSID import.</p>
-          </div>
-        </a>
-        <a href="notes_viewer.html" class="app-card">
-          <div class="app-icon app-icon--notes">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          </div>
-          <div>
-            <p class="app-title">Notes</p>
-            <p class="app-desc">Quick access to essential notes.</p>
-          </div>
-        </a>
-        <a href="machine_location.html" class="app-card">
-          <div class="app-icon app-icon--map" style="background: linear-gradient(135deg, #10b981, #3b82f6);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-          </div>
-          <div>
-            <p class="app-title">Lokasi Mesin</p>
-            <p class="app-desc">Peta lokasi mesin area Jatim.</p>
-          </div>
-        </a>
-        <a href="error_codes.html" class="app-card">
-          <div class="app-icon app-icon--error">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M4 12h10"></path><path d="M4 17h7"></path><path d="M17 14l3 3"></path><circle cx="16" cy="13" r="3"></circle></svg>
-          </div>
-          <div>
-            <p class="app-title">Error Codes</p>
-            <p class="app-desc">Search SR/VS error database from Firebase.</p>
-          </div>
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <nav class="bottom-nav">
-    <a href="index.html" class="nav-link active">
-      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg></span>
-      <span>Home</span>
-    </a>
-    <a href="work_planner.html" class="nav-link">
-      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 4.5h6"></path><path d="M8 10h8"></path><path d="M8 14h8"></path><path d="M8 18h5"></path></svg></span>
-      <span>Planner</span>
-    </a>
-    <a href="notes_viewer.html" class="nav-link">
-      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1Z"></path><path d="M8 8h7"></path><path d="M8 12h7"></path><path d="M7 20V6"></path></svg></span>
-      <span>Notes</span>
-    </a>
-    <a href="machine_location.html" class="nav-link">
-      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span>
-      <span>Lokasi</span>
-    </a>
-    <a href="error_codes.html" class="nav-link">
-      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M4 12h10"></path><path d="M4 17h7"></path><path d="M17 14l3 3"></path><circle cx="16" cy="13" r="3"></circle></svg></span>
-      <span>Error</span>
-    </a>
-    <a href="javascript:void(0)" class="nav-link" onclick="openThemeModal()">
-      <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"></path><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.98 2.98l-.04-.04A1.8 1.8 0 0 0 14.8 19a1.8 1.8 0 0 0-1.08 1.65V21a2.1 2.1 0 0 1-4.2 0v-.06A1.8 1.8 0 0 0 8.4 19a1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.98-2.98l.04-.04A1.8 1.8 0 0 0 5 15.2a1.8 1.8 0 0 0-1.65-1.08H3a2.1 2.1 0 0 1 0-4.2h.06A1.8 1.8 0 0 0 5 8.8a1.8 1.8 0 0 0-.36-1.98L4.6 6.78A2.1 2.1 0 1 1 7.58 3.8l.04.04A1.8 1.8 0 0 0 9.6 5a1.8 1.8 0 0 0 1.08-1.65V3a2.1 2.1 0 0 1 4.2 0v.06A1.8 1.8 0 0 0 16 5a1.8 1.8 0 0 0 1.98-.36l.04-.04A2.1 2.1 0 1 1 21 7.58l-.04.04A1.8 1.8 0 0 0 19 9.6a1.8 1.8 0 0 0 1.65 1.08H21a2.1 2.1 0 0 1 0 4.2h-.06A1.8 1.8 0 0 0 19.4 15Z"></path></svg></span>
-      <span>Settings</span>
-    </a>
-  </nav>
-
+<body class="eps-home">
+  <a class="skip-link" href="#mainContent">Lewati ke konten</a>
+  <main class="container" id="mainContent">
+    <header class="home-topbar"><div class="home-breadcrumb"><span>Workspace</span><span>/</span><strong>Beranda</strong></div><div class="home-actions"><button class="command-trigger" id="openCommand" type="button"><svg class="eps-icon" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span>Cari menu atau fitur...</span><kbd>Ctrl K</kbd></button><span class="profile-badge">CE</span></div></header>
+    <section class="home-intro"><div><div class="eyebrow"><span class="status-dot"></span>YOUR FIELD COMPANION</div><h1 id="greeting">Selamat datang.</h1><p>Semua kebutuhan lapangan, dalam satu workspace.</p></div><div class="today-label"><svg class="eps-icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18"/></svg><time id="todayLabel"></time></div></section>
+    <section class="workspace-grid" aria-label="Akses utama"><article class="planner-feature"><div class="planner-copy"><div class="eyebrow">WORK PLANNER</div><h2>Rencana rapi.<br><span>Kerja lebih pasti.</span></h2><p>Susun kunjungan, kelola WSID, dan tuntaskan pekerjaan satu per satu.</p><a class="home-primary" href="work_planner.html">Buka planner <svg class="eps-icon" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></a></div><div class="planner-art" aria-hidden="true"><strong>My work plan <span>CE</span></strong><i></i><i></i><i></i></div></article><aside class="day-card"><div class="day-top"><span>Hari ini</span><span>CE</span></div><div class="day-date"><b class="day-number" id="dayNumber"></b><span class="day-month" id="dayMonth"></span></div><div class="week-strip" id="weekStrip"></div><a class="day-bottom" id="recentLink" href="work_planner.html"><span id="recentTitle">Lanjutkan ke Work Planner</span><span>→</span></a></aside></section>
+    <div class="tools-heading"><h2>Peralatan kerjamu</h2><span>Lebih cepat ketemu solusinya.</span></div><section class="tools-grid"><a class="tool-card" href="notes_viewer.html"><div class="tool-card-top"><span class="tool-icon"><svg class="eps-icon" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8m-8 4h5"/></svg></span><svg class="eps-icon tool-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></svg></div><h3>Catatan Teknis</h3><p>Panduan dan catatan troubleshooting, siap saat dibutuhkan.</p><div class="tool-visual">Knowledge, on hand.</div></a><a class="tool-card" href="machine_location.html"><div class="tool-card-top"><span class="tool-icon"><svg class="eps-icon" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zm6-3v15m6-12v15"/></svg></span><svg class="eps-icon tool-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></svg></div><h3>Lokasi Mesin</h3><p>Temukan titik mesin dan rencanakan kunjungan di Jawa Timur.</p><div class="tool-visual">Peta dan referensi lokasi.</div></a><a class="tool-card" href="error_codes.html"><div class="tool-card-top"><span class="tool-icon"><svg class="eps-icon" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-14-2 18"/></svg></span><svg class="eps-icon tool-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></svg></div><h3>Error Codes</h3><p>Telusuri kode error SR / VS untuk memahami kendala mesin.</p><div class="tool-visual"><code>11FC167</code><span>SR / VS</span></div></a></section>
+    <footer class="home-footer"><span>EPS · Customer Engineer Workspace</span><button class="quiet-button" id="openTheme" type="button">Pilih tampilan</button></footer>
+  </main>
+  <dialog class="home-dialog" id="commandDialog"><div class="dialog-heading"><h2>Mau buka apa?</h2><button class="icon-button" data-close>×</button></div><input class="command-input" id="commandInput" placeholder="Coba “WSID”, “catatan”, atau “peta”"><div class="command-results" id="commandResults"></div><p class="search-hint" id="commandStatus"></p></dialog>
+  <div id="themeModal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:#14201966;backdrop-filter:blur(5px);align-items:center;justify-content:center;z-index:1000;padding:16px"><div class="modal-content home-dialog"><div class="dialog-heading"><h2>Tampilan yang kamu suka.</h2><button class="icon-button" id="closeTheme">×</button></div><div class="theme-grid"><button class="theme-option" data-theme-choice="studio" type="button">Studio</button><button class="theme-option" data-theme-choice="default" type="button">Default</button><button class="theme-option" data-theme-choice="linear" type="button">Linear</button><button class="theme-option" data-theme-choice="vercel" type="button">Vercel</button><button class="theme-option" data-theme-choice="apple" type="button">Apple</button><button class="theme-option" data-theme-choice="supabase" type="button">Supabase</button><button class="theme-option" data-theme-choice="liquid-glass" type="button">Liquid Glass</button></div></div></div>
+  <nav class="bottom-nav"><a href="index.html" class="nav-link active"><span class="nav-icon">⌂</span><span>Home</span></a><a href="work_planner.html" class="nav-link"><span class="nav-icon">☷</span><span>Planner</span></a><a href="notes_viewer.html" class="nav-link"><span class="nav-icon">▤</span><span>Notes</span></a><a href="machine_location.html" class="nav-link"><span class="nav-icon">⌖</span><span>Lokasi</span></a><a href="error_codes.html" class="nav-link"><span class="nav-icon">⌕</span><span>Error</span></a></nav>
   <script>
-    function openThemeModal() {
-      document.getElementById('themeModal').style.display = 'flex';
-    }
-
-    function closeThemeModal() {
-      document.getElementById('themeModal').style.display = 'none';
-    }
-
-    function selectTheme(themeId) {
-      setGlobalTheme(themeId);
-      closeThemeModal();
-    }
-
-    const titleEl = document.querySelector('[data-seasonal-title]');
-    if (titleEl) {
-      titleEl.addEventListener('click', () => {
-        sessionStorage.setItem('showAdminLogin', 'true');
-        window.location.href = 'admin_notes.html';
-      });
-    }
+    const tools=[['work_planner.html','Work Planner','jadwal tugas wsid excel kunjungan'],['notes_viewer.html','Catatan Teknis','notes catatan panduan troubleshooting'],['machine_location.html','Lokasi Mesin','peta lokasi mesin'],['error_codes.html','Error Codes','kode error sr vs']]; const now=new Date(), fmt=o=>new Intl.DateTimeFormat('id-ID',o).format(now); document.querySelector('#todayLabel').textContent=fmt({weekday:'long',day:'numeric',month:'long',year:'numeric'}); document.querySelector('#dayNumber').textContent=fmt({day:'2-digit'}); document.querySelector('#dayMonth').textContent=fmt({weekday:'long',month:'long',year:'numeric'}); document.querySelector('#greeting').textContent=now.getHours()<11?'Selamat pagi.':now.getHours()<15?'Selamat siang.':now.getHours()<18?'Selamat sore.':'Selamat malam.';
+    const start=new Date(now);start.setDate(now.getDate()-((now.getDay()+6)%7)); ['S','S','R','K','J','S','M'].forEach((n,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);const e=document.createElement('span');e.className='week-day'+(d.toDateString()===now.toDateString()?' today':'');e.innerHTML=`<span>${n}</span><b>${d.getDate()}</b>`;document.querySelector('#weekStrip').append(e)});
+    const dialog=document.querySelector('#commandDialog'),input=document.querySelector('#commandInput'),results=document.querySelector('#commandResults'),status=document.querySelector('#commandStatus'); function render(){const q=input.value.toLowerCase();const matched=tools.filter(t=>t.join(' ').toLowerCase().includes(q));results.innerHTML=matched.map(t=>`<a class="command-result" href="${t[0]}"><strong>${t[1]}<small>${t[2]}</small></strong><span>↗</span></a>`).join('');status.textContent=matched.length?`${matched.length} menu tersedia.`:'Menu tidak ditemukan.'} function openCommand(){input.value='';render();dialog.showModal();input.focus()} document.querySelector('#openCommand').onclick=openCommand; input.oninput=render; document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCommand()}});document.querySelector('[data-close]').onclick=()=>dialog.close();
+    const modal=document.querySelector('#themeModal');function showTheme(){modal.style.display='flex'}function hideTheme(){modal.style.display='none'}document.querySelector('#openTheme').onclick=showTheme;document.querySelector('#closeTheme').onclick=hideTheme;modal.onclick=e=>{if(e.target===modal)hideTheme()};modal.querySelectorAll('[data-theme-choice]').forEach(b=>b.onclick=()=>{setGlobalTheme(b.dataset.themeChoice);hideTheme()});
   </script>
 </body>
-
 </html>

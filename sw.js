@@ -1,4 +1,4 @@
-const CACHE_VERSION = '202609112133';
+const CACHE_VERSION = '202609140623';
 const CACHE_NAME = `eps-work-planner-v${CACHE_VERSION}`;
 const CDN_CACHE_NAME = `eps-cdn-v${CACHE_VERSION}`;
 const CACHE_PREFIXES = ['eps-work-planner-v', 'eps-cdn-v'];
@@ -17,6 +17,7 @@ const urlsToCache = [
   v('./styles.css'),
   v('./design-tokens.css'),
   v('./theme-light.css'),
+  v('./theme-studio.css'),
   v('./theme-dark.css'),
   v('./theme-default.css'),
   v('./theme-linear.css'),
