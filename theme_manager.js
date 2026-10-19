@@ -5,7 +5,7 @@
 
 const THEME_KEY = 'eps_theme_pref';
 const APP_SEMANTIC_VERSION = '1.2.0';
-const THEME_VERSION = '202609140623';
+const THEME_VERSION = '202610191435';
 
 const THEME_MANIFEST = {
     'studio': `theme-studio.css?v=${THEME_VERSION}`,
