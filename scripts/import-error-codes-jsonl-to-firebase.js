@@ -198,7 +198,7 @@ function parseRecordText(text) {
 function jsonlEntryToRecord(entry, index) {
   const metadata = entry.metadata || {};
   const fields = parseRecordText(entry.text);
-  const usesHumanLabels = /(?:^|\n)(Masalah|Tindakan operator|Diagnosis teknisi|Pemeriksaan awal teknisi):/i.test(String(entry.text || ''));
+  const usesHumanLabels = /(?:^|\n)(?:Masalah|Tindakan operator|Diagnosis teknisi|Pemeriksaan awal teknisi|Operator cause|Operator recovery|Service cause|Service recovery|All service recovery):/i.test(String(entry.text || ''));
   const cleanText = usesHumanLabels ? normalizeHumanText : normalizeTechnicalText;
   const code = String(metadata.error_code_pattern || fields.error_code || '').toUpperCase();
   const prefix = String(metadata.pattern_static_prefix || staticPrefix(code)).toUpperCase();
